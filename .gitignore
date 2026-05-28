@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.vercel/
+.netlify/
+.firebase/
+*.log
+.DS_Store
+Thumbs.db
