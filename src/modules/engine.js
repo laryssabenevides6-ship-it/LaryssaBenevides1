@@ -44,6 +44,19 @@ export function completeLesson(state, lessonId, now = todayISO()) {
   return runAutomations(state, now);
 }
 
+export function reopenLesson(state, lessonId, now = todayISO()) {
+  const lesson = state.schedule.find((item) => item.id === lessonId);
+  if (!lesson) return state;
+  lesson.completed = false;
+  lesson.completedAt = "";
+  lesson.status = lesson.date < now ? "Atrasado" : "Não iniciado";
+  lesson.movedToBacklog = lesson.date < now;
+  state.reviews = state.reviews.filter(
+    (review) => !(review.sourceType === "lesson" && review.sourceId === lesson.id && review.status !== "concluída")
+  );
+  return runAutomations(state, now);
+}
+
 export function completeReview(state, reviewId) {
   const review = state.reviews.find((item) => item.id === reviewId);
   if (!review) return state;

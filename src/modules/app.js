@@ -9,6 +9,7 @@ import {
   getDerived,
   logAnki,
   markErrorImportant,
+  reopenLesson,
   runAutomations,
   saveTimerSession
 } from "./engine.js";
@@ -42,7 +43,8 @@ const modalContent = $("#modalContent");
 init();
 
 async function init() {
-  const response = await fetch("./data/cronograma.json");
+  let response = await fetch("./data/cronograma.json");
+  if (!response.ok) response = await fetch("./public/data/cronograma.json");
   const data = await response.json();
   seed = data.items;
   state = runAutomations(loadState(seed));
@@ -147,21 +149,17 @@ function renderToday(d) {
 
 function renderSchedule(d) {
   const q = searchTerm();
-  const rows = state.schedule
+  const filtered = state.schedule
     .filter((item) => matches(item, q))
-    .slice(0, 160)
-    .map((item) => scheduleRow(item))
-    .join("");
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const weeks = groupScheduleByWeek(filtered);
   return `
     <div class="toolbar">
-      <span>${state.schedule.length} itens importados · ${d.overdueLessons.length} atrasados · ${d.completed.length} concluídos</span>
+      <span>${weeks.length} semanas · ${filtered.length} aulas visíveis · ${d.overdueLessons.length} atrasadas · ${d.completed.length} concluídas</span>
       <button class="secondary-button" data-action="goto-backlog">Ver atrasos</button>
     </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Data</th><th>Área</th><th>Aula MEDCOF</th><th>Step 1</th><th>Prioridade</th><th>Status</th><th></th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
+    <div class="weekly-schedule">
+      ${weeks.map(([week, items]) => scheduleWeekSection(week, items, d.now)).join("") || empty("Nenhuma aula encontrada.")}
     </div>`;
 }
 
@@ -293,6 +291,12 @@ function bindView() {
   viewEl.querySelectorAll("[data-complete-lesson]").forEach((button) =>
     button.addEventListener("click", () => {
       state = completeLesson(state, button.dataset.completeLesson);
+      persistRender();
+    })
+  );
+  viewEl.querySelectorAll("[data-toggle-lesson]").forEach((input) =>
+    input.addEventListener("change", () => {
+      state = input.checked ? completeLesson(state, input.dataset.toggleLesson) : reopenLesson(state, input.dataset.toggleLesson);
       persistRender();
     })
   );
@@ -461,14 +465,70 @@ function cardQueue(cards) {
 
 function scheduleRow(item) {
   return `<tr class="${item.movedToBacklog ? "late-row" : ""}">
+    <td>
+      <label class="done-toggle">
+        <input type="checkbox" data-toggle-lesson="${item.id}" ${item.completed ? "checked" : ""} />
+        <span>${item.completed ? "Feito" : "Não feito"}</span>
+      </label>
+    </td>
     <td>${fmtDate(item.date)}</td>
     <td>${item.area}</td>
     <td>${item.medcofClass}</td>
     <td>${item.stepClass}<br><small>${item.stepSystem}</small></td>
     <td><span class="pill">${item.medcofPriority || item.monthlyPriority}</span></td>
     <td>${item.status}</td>
-    <td>${item.completed ? "✓" : `<button class="secondary-button" data-complete-lesson="${item.id}">Concluir</button>`}</td>
   </tr>`;
+}
+
+function scheduleWeekSection(week, items, now) {
+  const done = items.filter((item) => item.completed).length;
+  const late = items.filter((item) => item.movedToBacklog).length;
+  const first = items[0]?.date;
+  const last = items.at(-1)?.date;
+  const isCurrent = first <= now && last >= now;
+  const isUpcoming = first > now;
+  const open = isCurrent || (!searchTerm() && isUpcoming && items.some((item) => item.date <= addDaysForView(now, 7)));
+  return `<details class="week-card" ${open ? "open" : ""}>
+    <summary>
+      <div>
+        <strong>${weekLabel(week)}</strong>
+        <span>${fmtDate(first)} a ${fmtDate(last)}</span>
+      </div>
+      <div class="week-stats">
+        <span>${done}/${items.length} feitas</span>
+        ${late ? `<span class="danger-text">${late} atrasadas</span>` : ""}
+      </div>
+    </summary>
+    <div class="week-progress"><i style="width:${Math.round((done / items.length) * 100)}%"></i></div>
+    <div class="table-wrap compact-table">
+      <table>
+        <thead><tr><th>Feito</th><th>Data</th><th>Área</th><th>Aula MEDCOF</th><th>Step 1</th><th>Prioridade</th><th>Status</th></tr></thead>
+        <tbody>${items.map((item) => scheduleRow(item)).join("")}</tbody>
+      </table>
+    </div>
+  </details>`;
+}
+
+function groupScheduleByWeek(items) {
+  const groups = new Map();
+  items.forEach((item) => {
+    const week = item.week || "Sem semana";
+    if (!groups.has(week)) groups.set(week, []);
+    groups.get(week).push(item);
+  });
+  return [...groups.entries()].sort((a, b) => (a[1][0]?.date || "").localeCompare(b[1][0]?.date || ""));
+}
+
+function weekLabel(week) {
+  const match = String(week).match(/^(\d{4})-W(\d{2})$/);
+  if (!match) return week;
+  return `Semana ${Number(match[2])} · ${match[1]}`;
+}
+
+function addDaysForView(dateISO, days) {
+  const date = new Date(`${dateISO}T12:00:00`);
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
 }
 
 function formSession() {

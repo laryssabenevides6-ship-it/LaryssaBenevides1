@@ -467,6 +467,73 @@ h2 {
   background: var(--surface);
 }
 
+.weekly-schedule {
+  display: grid;
+  gap: 14px;
+}
+
+.week-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.week-card summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.week-card summary::-webkit-details-marker {
+  display: none;
+}
+
+.week-card summary strong,
+.week-card summary span {
+  display: block;
+}
+
+.week-card summary span,
+.week-stats {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.week-stats {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.danger-text {
+  color: var(--danger);
+}
+
+.week-progress {
+  height: 5px;
+  background: var(--surface-2);
+}
+
+.week-progress i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--brand), var(--brand-2));
+}
+
+.compact-table {
+  border-width: 1px 0 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -496,6 +563,22 @@ th {
   color: var(--info);
   font-size: 12px;
   font-weight: 800;
+}
+
+.done-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 110px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.done-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--brand);
 }
 
 .form {
