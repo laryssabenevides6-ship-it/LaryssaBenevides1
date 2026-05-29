@@ -387,71 +387,59 @@ function serializeBoardFromDOM() {
 }
 
 function renderQuestions(d) {
-  return `<section class="questions-hero panel">
+  return `<section class="questions-hero panel simple-questions-hero">
       <div>
-        <p class="eyebrow">Execucao de questoes</p>
-        <h2>Registre primeiro o bloco que voce acabou de fazer</h2>
-        <p class="muted">Preencha de cima para baixo: contexto, assunto e resultado. O percentual e o tempo medio aparecem automaticamente.</p>
+        <p class="eyebrow">Questoes</p>
+        <h2>Registre o bloco em menos de um minuto</h2>
+        <p class="muted">Preencha o essencial. Se apareceu um erro importante, registre no mesmo lugar e ele entra no Caderno de Erros.</p>
       </div>
-      <div class="grid metrics compact-metrics">
-        ${metric("Questoes", d.totalQuestions, "registradas")}
-        ${metric("Acertos", `${d.accuracy}%`, "geral")}
-        ${metric("Semana", d.weekQuestions, "ultimos 7 dias")}
-        ${metric("Horas", `${d.hours}h`, "questoes e simulados")}
+      <div class="quick-result">
+        <div><span>Acerto do bloco</span><strong id="qAccuracyPreview">-</strong></div>
+        <div><span>Tempo medio</span><strong id="qAvgPreview">-</strong></div>
       </div>
     </section>
-    <div class="questions-layout">
-      <section class="panel questions-main">${questionsForm()}</section>
-      <aside class="panel questions-side">
-        <div class="section-title"><h2>Resumo deste bloco</h2><span>ao vivo</span></div>
-        <div class="result-preview">
-          <div><span>Percentual</span><strong id="qAccuracyPreview">-</strong></div>
-          <div><span>Tempo medio</span><strong id="qAvgPreview">-</strong></div>
-          <div><span>Volume</span><strong id="qVolumePreview">0 questoes</strong></div>
-        </div>
-        <div class="study-hint">
-          <strong>Como usar</strong>
-          <p>Use "Tutor" para aprender, "Teste" para medir desempenho e "Revisao de erros" quando estiver atacando pontos fracos.</p>
-        </div>
-      </aside>
+    <section class="panel questions-main simple-question-panel">${questionsForm()}</section>
+    <div class="grid metrics compact-metrics">
+      ${metric("Questoes", d.totalQuestions, "registradas")}
+      ${metric("Acertos", `${d.accuracy}%`, "geral")}
+      ${metric("Semana", d.weekQuestions, "ultimos 7 dias")}
+      ${metric("Horas", `${d.hours}h`, "questoes e simulados")}
     </div>
     <section class="panel simulation-panel">${simulationForm()}</section>
     <section class="panel"><div class="section-title"><h2>Historico recente</h2><span>ultimos registros</span></div>${historyList(state.sessions.slice(-8).reverse())}</section>`;
 }
 
 function questionsForm() {
-  return `<div class="section-title"><h2>Registrar questoes feitas</h2><span>bloco comum</span></div>
-  <form id="questionsForm" class="guided-form">
-    <fieldset>
-      <legend>1. Contexto do bloco</legend>
-      <div class="form-grid three">
-        ${fieldSelect("source", "Fonte", ["MEDCOF", "UWorld", "Prova antiga", "Outro"])}
-        ${fieldSelect("mode", "Modo", ["Tutor", "Teste"])}
-        ${fieldSelect("target", "Prova-alvo", ["Residencia BR", "Step 1", "Ambos"])}
-        ${fieldSelect("selection", "Selecao", ["Por assunto", "Por sistema", "Random/misto", "Revisao de erros"])}
-        ${fieldSelect("format", "Formato", ["Bloco comum", "Simulado completo"])}
+  return `<div class="section-title"><h2>Registrar questoes feitas</h2><span>simples e rapido</span></div>
+  <form id="questionsForm" class="quick-question-form">
+    <div class="quick-row">
+      ${fieldSelect("source", "Fonte", ["MEDCOF", "UWorld", "Prova antiga", "Outro"])}
+      ${fieldSelect("target", "Prova", ["Residencia BR", "Step 1", "Ambos"])}
+      ${fieldSelect("mode", "Modo", ["Tutor", "Teste"])}
+    </div>
+    <div class="quick-row">
+      ${fieldInput("subject", "Materia", "Ex.: Cardiologia", "text", true)}
+      ${fieldInput("system", "Sistema", "Ex.: Cardiovascular", "text", true)}
+      ${fieldInput("topic", "Tema", "Opcional")}
+    </div>
+    <div class="quick-row result-row">
+      ${fieldInput("questions", "Questoes", "20", "number", true, 'min="1"')}
+      ${fieldInput("correct", "Acertos", "15", "number", true, 'min="0"')}
+      ${fieldInput("minutes", "Minutos", "40", "number", true, 'min="0"')}
+      ${fieldInput("accuracy", "Percentual", "Auto", "text", false, "readonly")}
+      ${fieldInput("avgTime", "Tempo/q", "Auto", "text", false, "readonly")}
+    </div>
+    <details class="inline-error-box">
+      <summary>Registrar erro importante deste bloco</summary>
+      <div class="quick-row">
+        ${fieldInput("errorTopic", "Tema do erro", "Ex.: choque distributivo")}
+        ${fieldSelect("errorType", "Tipo", ["Conceito", "Interpretacao", "Memorizacao", "Atencao", "Tempo"])}
+        ${fieldSelect("errorSeverity", "Gravidade", ["Baixa", "Media", "Alta", "Critica"])}
       </div>
-    </fieldset>
-    <fieldset>
-      <legend>2. Assunto estudado</legend>
-      <div class="form-grid three">
-        ${fieldInput("subject", "Materia", "Ex.: Cardiologia", "text", true)}
-        ${fieldInput("system", "Sistema", "Ex.: Cardiovascular", "text", true)}
-        ${fieldInput("topic", "Tema", "Ex.: Choque septico")}
-      </div>
-    </fieldset>
-    <fieldset>
-      <legend>3. Resultado</legend>
-      <div class="form-grid four">
-        ${fieldInput("questions", "Numero de questoes", "Ex.: 20", "number", true, 'min="1"')}
-        ${fieldInput("correct", "Acertos", "Ex.: 15", "number", true, 'min="0"')}
-        ${fieldInput("accuracy", "Percentual", "Calculado automaticamente", "text", false, "readonly")}
-        ${fieldInput("minutes", "Tempo total", "Minutos", "number", true, 'min="0"')}
-        ${fieldInput("avgTime", "Tempo medio por questao", "Calculado automaticamente", "text", false, "readonly")}
-      </div>
-    </fieldset>
-    <label class="field full-field"><span>Observacoes</span><textarea name="notes" placeholder="O que ficou dificil? Algum erro recorrente?"></textarea></label>
-    <button class="primary-button submit-main" type="submit">Registrar questoes feitas</button>
+      <label class="field full-field"><span>Resumo do erro</span><textarea name="errorSummary" placeholder="O que voce errou e qual sera a proxima acao?"></textarea></label>
+    </details>
+    <label class="field full-field"><span>Observacoes do bloco</span><textarea name="notes" placeholder="Opcional: dificuldade geral, fonte, comentarios..."></textarea></label>
+    <button class="primary-button submit-main" type="submit">Salvar bloco de questoes</button>
   </form>`;
 }
 
@@ -631,10 +619,31 @@ function handleAction(event) {
 
 function handleQuestionsSubmit(event) {
   event.preventDefault();
-  state = addQuestionSession(state, Object.fromEntries(new FormData(event.currentTarget)));
+  const data = Object.fromEntries(new FormData(event.currentTarget));
+  state = addQuestionSession(state, {
+    ...data,
+    selection: data.errorSummary ? "Revisao de erros" : "Por assunto",
+    format: "Bloco comum"
+  });
+  if (data.errorSummary?.trim()) {
+    state = addError(state, {
+      date: todayISO(),
+      source: data.source,
+      subject: data.subject,
+      system: data.system,
+      topic: data.errorTopic || data.topic,
+      summary: data.errorSummary,
+      type: data.errorType || "Conceito",
+      probableReason: "",
+      severity: data.errorSeverity || "Media",
+      nextAction: "Revisar este erro",
+      status: "Aberto"
+    });
+  }
   const today = getDerived(state).today;
   if (today?.date === todayISO()) state = setTask(state, today.id, "questions", true);
   event.currentTarget.reset();
+  updateQuestionCalculatedFields({ currentTarget: event.currentTarget });
   persistRender();
 }
 
@@ -689,7 +698,6 @@ function updateQuestionCalculatedFields(event) {
   form.avgTime.value = avg;
   $("#qAccuracyPreview") && ($("#qAccuracyPreview").textContent = accuracy || "-");
   $("#qAvgPreview") && ($("#qAvgPreview").textContent = avg || "-");
-  $("#qVolumePreview") && ($("#qVolumePreview").textContent = `${questions} questoes`);
 }
 
 function checkbox(day, key, label) {
