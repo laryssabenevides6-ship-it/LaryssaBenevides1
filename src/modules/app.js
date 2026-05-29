@@ -407,10 +407,9 @@ function renderQuestions(d) {
 function questionsForm() {
   return `<div class="section-title"><h2>Registrar questoes feitas</h2><span>simples e rapido</span></div>
   <form id="questionsForm" class="quick-question-form">
-    <div class="quick-row">
+    <div class="quick-row two">
       ${fieldSelect("source", "Fonte", ["MEDCOF", "UWorld", "Prova antiga", "Outro"])}
       ${fieldSelect("target", "Prova", ["Residencia BR", "Step 1", "Ambos"])}
-      ${fieldSelect("mode", "Modo", ["Tutor", "Teste"])}
     </div>
     <div class="quick-row">
       ${fieldInput("subject", "Materia", "Ex.: Cardiologia", "text", true)}
@@ -612,6 +611,7 @@ function handleQuestionsSubmit(event) {
   const data = Object.fromEntries(new FormData(event.currentTarget));
   state = addQuestionSession(state, {
     ...data,
+    mode: "Nao informado",
     selection: data.errorSummary ? "Revisao de erros" : "Por assunto",
     format: "Bloco comum"
   });
