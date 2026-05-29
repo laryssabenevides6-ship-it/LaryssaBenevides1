@@ -39,7 +39,6 @@ const views = [
   ["schedule", "Cronograma", "C"],
   ["questions", "Questoes", "Q"],
   ["errors", "Caderno de Erros", "!"],
-  ["anki", "Anki", "A"],
   ["dashboard", "Dashboard", "D"],
   ["settings", "Conta e Backup", "*"]
 ];
@@ -191,7 +190,6 @@ function render() {
     schedule: renderSchedule,
     questions: renderQuestions,
     errors: renderErrors,
-    anki: renderAnki,
     dashboard: renderDashboard,
     settings: renderSettings
   }[currentView];
@@ -516,15 +514,6 @@ function errorForm() {
     ${select("status", ["Aberto", "Revisado", "Resolvido", "Recorrente"], "Status")}
     <button class="primary-button" type="submit">Salvar erro</button>
   </form>`;
-}
-
-function renderAnki(d) {
-  const day = d.today;
-  return `<section class="panel anki-simple">
-    <div class="section-title"><h2>Anki obrigatorio</h2><span>tarefa diaria simples</span></div>
-    <strong>Anki: ${day?.tasks?.anki ? "Feito" : "Pendente"}</strong>
-    <button class="${day?.tasks?.anki ? "secondary-button" : "primary-button"}" data-action="toggle-anki" data-day-id="${day?.id || ""}">${day?.tasks?.anki ? "Desmarcar Anki" : "Marcar Anki como feito"}</button>
-  </section>`;
 }
 
 function renderDashboard(d) {
