@@ -92,7 +92,8 @@ export function freshState(scheduleItems = []) {
     errors: [],
     sessions: [],
     simulations: [],
-    timers: []
+    timers: [],
+    activeTimer: null
   };
 }
 
@@ -158,7 +159,8 @@ function migrate(state, scheduleItems = []) {
     errors: (state.errors || []).map(normalizeError),
     sessions: state.sessions || [],
     simulations: state.simulations || [],
-    timers: state.timers || []
+    timers: state.timers || [],
+    activeTimer: state.activeTimer || null
   };
 }
 

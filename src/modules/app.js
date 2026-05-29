@@ -5,11 +5,15 @@ import {
   addQuestionSession,
   addSimulation,
   dayLabel,
+  finishStudyTimer,
   getDerived,
+  pauseStudyTimer,
   rescheduleDay,
+  resumeStudyTimer,
   runAutomations,
   saveWeeklyBoard,
   setTask,
+  startStudyTimer,
   taskCompletion,
   taskLabel,
   taskStatus,
@@ -46,6 +50,7 @@ let user;
 let currentView = "today";
 let selectedScheduleWeek = "";
 let showAllErrors = false;
+let studyTimerTicker = null;
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -153,13 +158,6 @@ function bindShell() {
     document.body.dataset.theme = state.preferences.theme;
     persistRender();
   });
-  $("#quickSessionBtn").textContent = "Registrar questoes feitas";
-  $("#quickSessionBtn").addEventListener("click", () => {
-    currentView = "questions";
-    renderNav();
-    render();
-    setTimeout(() => $("#questionsForm input[name='questions']")?.focus(), 50);
-  });
   $("#globalSearch").addEventListener("input", render);
   $("#userMini").textContent = user.name;
   $("#userMini").nextElementSibling.textContent = "usuario conectado";
@@ -199,6 +197,7 @@ function render() {
   }[currentView];
   $("#view").innerHTML = renderer(derived);
   bindView();
+  syncStudyTimerTicker();
 }
 
 function renderToday(d) {
@@ -224,6 +223,7 @@ function renderToday(d) {
         ${metric("Progresso", `${d.progress}%`, "cronograma")}
         ${metric("Questoes semana", d.weekQuestions, "ultimos 7 dias")}
         ${metric("Acertos", `${d.accuracy}%`, `${d.totalCorrect}/${d.totalQuestions}`)}
+        ${metric("Horas estudadas", `${d.hours}h`, `${d.studyTimerHours}h pelo cronometro`)}
         ${metric("Erros abertos", d.openErrors.length, "para revisar")}
       </div>
     </section>`;
@@ -256,7 +256,53 @@ function planTaskCard(day, key, label, value) {
     </label>
     <small>${label}</small>
     <strong>${value}</strong>
+    ${studyTimerControls(day, key)}
   </div>`;
+}
+
+function studyTimerControls(day, key) {
+  if (!["medcof", "step", "interleaving"].includes(key)) return "";
+  const active = state.activeTimer;
+  const isThisTimer = active?.dayId === day.id && active?.taskKey === key;
+  if (isThisTimer) {
+    return `<div class="study-timer active">
+      <div><span>${active.pausedAt ? "Pausado" : "Cronometro ativo"}</span><strong data-active-timer-display>${formatStudyTimer(active)}</strong></div>
+      <div class="timer-actions">
+        <button class="secondary-button mini-button" data-action="${active.pausedAt ? "resume-timer" : "pause-timer"}" type="button">${active.pausedAt ? "Retomar" : "Pausar"}</button>
+        <button class="primary-button mini-button" data-action="finish-timer" type="button">Finalizar</button>
+      </div>
+    </div>`;
+  }
+  if (active) {
+    return `<div class="study-timer blocked"><span>Cronometro ativo em: ${active.title}</span></div>`;
+  }
+  return `<div class="study-timer">
+    <button class="secondary-button mini-button" data-action="start-timer" data-day-id="${day.id}" data-task-key="${key}" type="button">Iniciar cronometro</button>
+  </div>`;
+}
+
+function syncStudyTimerTicker() {
+  clearInterval(studyTimerTicker);
+  updateStudyTimerDisplays();
+  if (!state?.activeTimer || state.activeTimer.pausedAt) return;
+  studyTimerTicker = setInterval(updateStudyTimerDisplays, 1000);
+}
+
+function updateStudyTimerDisplays() {
+  if (!state?.activeTimer) return;
+  document.querySelectorAll("[data-active-timer-display]").forEach((item) => {
+    item.textContent = formatStudyTimer(state.activeTimer);
+  });
+}
+
+function formatStudyTimer(timer) {
+  const now = timer.pausedAt ? new Date(timer.pausedAt) : new Date();
+  const elapsedMs = Math.max(0, now - new Date(timer.startedAt) - (timer.pausedMs || 0));
+  const totalSeconds = Math.floor(elapsedMs / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return [hours, minutes, seconds].map((part) => String(part).padStart(2, "0")).join(":");
 }
 
 function weekDayCard(day) {
@@ -486,7 +532,7 @@ function renderDashboard(d) {
       ${metric("Progresso", `${d.progress}%`, "dias concluidos")}
       ${metric("Questoes", d.totalQuestions, "total")}
       ${metric("Acertos", `${d.accuracy}%`, "geral")}
-      ${metric("Horas extra", `${d.outsideHours}h`, "fora do cronograma")}
+      ${metric("Horas totais", `${d.hours}h`, `${d.studyTimerHours}h pelo cronometro`)}
     </div>
     <div class="dashboard-grid">
       <section class="panel">${barList(d.weekProgress, "Execucao da semana")}</section>
@@ -566,9 +612,12 @@ function openDayModal(dayId) {
       <div><small>Questoes</small><strong>${day.plannedQuestions}</strong></div>
       <div><small>Interleaving</small><strong>${day.secondaryBlock || day.dailyFocus}</strong></div>
     </div>
+    <div class="modal-study-timers">
+      ${["medcof", "step", "interleaving"].map((key) => `<article><strong>${taskLabel(key)}</strong>${studyTimerControls(day, key)}</article>`).join("")}
+    </div>
     <div class="task-checklist">${TASKS.map(([key, label]) => checkbox(day, key, label)).join("")}</div>
     <form id="rescheduleForm" class="form compact"><input name="date" type="date" required /><button class="secondary-button">Reprogramar dia</button></form>`;
-  $("#modal").showModal();
+  if (!$("#modal").open) $("#modal").showModal();
   $("#modalContent").querySelectorAll("[data-task]").forEach((input) =>
     input.addEventListener("change", () => {
       state = setTask(state, input.dataset.dayId, input.dataset.task, input.checked);
@@ -583,12 +632,18 @@ function openDayModal(dayId) {
     $("#modal").close();
     persistRender();
   });
+  $("#modalContent").querySelectorAll("[data-action]").forEach((button) => button.addEventListener("click", handleAction));
 }
 
 function handleAction(event) {
   const action = event.currentTarget.dataset.action;
+  const modalDayId = event.currentTarget.closest("#modalContent") ? event.currentTarget.dataset.dayId || state.activeTimer?.dayId : "";
   if (action === "goto-questions") currentView = "questions";
   if (action === "goto-errors") currentView = "errors";
+  if (action === "start-timer") state = startStudyTimer(state, event.currentTarget.dataset.dayId, event.currentTarget.dataset.taskKey);
+  if (action === "pause-timer") state = pauseStudyTimer(state);
+  if (action === "resume-timer") state = resumeStudyTimer(state);
+  if (action === "finish-timer") state = finishStudyTimer(state);
   if (action === "mark-anki" || action === "toggle-anki") {
     const day = state.schedule.find((item) => item.id === event.currentTarget.dataset.dayId);
     state = setTask(state, event.currentTarget.dataset.dayId, "anki", !day?.tasks?.anki);
@@ -604,6 +659,7 @@ function handleAction(event) {
   }
   renderNav();
   persistRender();
+  if ($("#modal")?.open && modalDayId) openDayModal(modalDayId);
 }
 
 function handleQuestionsSubmit(event) {

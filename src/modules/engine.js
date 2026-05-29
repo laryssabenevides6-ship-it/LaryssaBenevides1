@@ -29,6 +29,62 @@ export function setTask(state, dayId, taskKey, done, now = todayISO()) {
   return runAutomations(state, now);
 }
 
+export function startStudyTimer(state, dayId, taskKey, nowDate = new Date()) {
+  const day = state.schedule.find((item) => item.id === dayId);
+  if (!day || !["medcof", "step", "interleaving"].includes(taskKey)) return state;
+  if (state.activeTimer) return state;
+  state.activeTimer = {
+    id: uid("timer"),
+    dayId,
+    taskKey,
+    title: timerTitle(day, taskKey),
+    subject: day.area || "Cronograma",
+    system: day.stepSystem || day.secondaryBlock || "",
+    startedAt: nowDate.toISOString(),
+    pausedAt: "",
+    pausedMs: 0
+  };
+  return state;
+}
+
+export function pauseStudyTimer(state, nowDate = new Date()) {
+  if (!state.activeTimer || state.activeTimer.pausedAt) return state;
+  state.activeTimer.pausedAt = nowDate.toISOString();
+  return state;
+}
+
+export function resumeStudyTimer(state, nowDate = new Date()) {
+  const timer = state.activeTimer;
+  if (!timer?.pausedAt) return state;
+  timer.pausedMs = (timer.pausedMs || 0) + Math.max(0, nowDate - new Date(timer.pausedAt));
+  timer.pausedAt = "";
+  return state;
+}
+
+export function finishStudyTimer(state, nowDate = new Date()) {
+  const timer = state.activeTimer;
+  if (!timer) return state;
+  const currentPauseMs = timer.pausedAt ? Math.max(0, nowDate - new Date(timer.pausedAt)) : 0;
+  const elapsedMs = Math.max(0, nowDate - new Date(timer.startedAt) - (timer.pausedMs || 0) - currentPauseMs);
+  const day = state.schedule.find((item) => item.id === timer.dayId);
+  state.timers ||= [];
+  state.timers.push({
+    id: timer.id,
+    dayId: timer.dayId,
+    taskKey: timer.taskKey,
+    title: timer.title,
+    subject: timer.subject,
+    system: timer.system,
+    date: nowDate.toISOString().slice(0, 10),
+    startedAt: timer.startedAt,
+    finishedAt: nowDate.toISOString(),
+    minutes: Math.max(1, Math.round(elapsedMs / 60000)),
+    lesson: timerTitle(day, timer.taskKey)
+  });
+  state.activeTimer = null;
+  return state;
+}
+
 export function rescheduleDay(state, dayId, dateISO, now = todayISO()) {
   const day = state.schedule.find((item) => item.id === dayId);
   if (!day || !dateISO) return state;
@@ -164,10 +220,12 @@ export function getDerived(state, now = todayISO()) {
   const totalQuestions = state.sessions.reduce((sum, item) => sum + item.questions, 0);
   const totalCorrect = state.sessions.reduce((sum, item) => sum + item.correct, 0);
   const outsideStudies = state.outsideStudies || [];
+  const timerMinutes = (state.timers || []).reduce((sum, item) => sum + (item.minutes || 0), 0);
   const totalMinutes =
     state.sessions.reduce((sum, item) => sum + item.minutes, 0) +
     state.simulations.reduce((sum, item) => sum + item.minutes, 0) +
-    outsideStudies.reduce((sum, item) => sum + item.minutes, 0);
+    outsideStudies.reduce((sum, item) => sum + item.minutes, 0) +
+    timerMinutes;
   const openErrors = state.errors.filter((error) => error.status === "Aberto" || error.status === "Recorrente");
   const weekSessions = state.sessions.filter((item) => item.date >= addDays(now, -6) && item.date <= now);
   const weekQuestions = weekSessions.reduce((sum, item) => sum + item.questions, 0);
@@ -185,6 +243,8 @@ export function getDerived(state, now = todayISO()) {
     totalCorrect,
     accuracy: pct(totalCorrect, totalQuestions),
     hours: Math.round((totalMinutes / 60) * 10) / 10,
+    studyTimerHours: Math.round((timerMinutes / 60) * 10) / 10,
+    activeTimer: state.activeTimer,
     openErrors,
     outsideStudies,
     outsideHours: Math.round((outsideStudies.reduce((sum, item) => sum + item.minutes, 0) / 60) * 10) / 10,
@@ -196,6 +256,14 @@ export function getDerived(state, now = todayISO()) {
     statusCounts: groupCount(schedule, (item) => item.status),
     weekProgress: weekDays.map((day) => ({ label: dayLabel(day), value: taskCompletion(day) }))
   };
+}
+
+function timerTitle(day, taskKey) {
+  if (!day) return "Estudo do cronograma";
+  if (taskKey === "medcof") return day.medcofClass || "Aula MEDCOF";
+  if (taskKey === "step") return day.stepClass || "Aula B&B / Step 1";
+  if (taskKey === "interleaving") return day.secondaryBlock || day.dailyFocus || "Interleaving";
+  return "Estudo do cronograma";
 }
 
 export function taskCompletion(day) {
