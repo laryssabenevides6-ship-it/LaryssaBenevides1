@@ -299,8 +299,7 @@ h2 {
 
 .metric,
 .panel,
-.task-card,
-.flash-card {
+.task-card {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
@@ -362,35 +361,31 @@ h2 {
   font-size: 13px;
 }
 
-.cards-list {
+.record-list {
   display: grid;
   gap: 10px;
 }
 
 .task-card,
-.flash-card {
   display: grid;
   gap: 10px;
   padding: 13px;
   box-shadow: none;
 }
 
-.task-card strong,
-.flash-card strong {
+.task-card strong {
   display: block;
   line-height: 1.25;
 }
 
-.task-card span,
-.flash-card span {
+.task-card span {
   display: block;
   margin-top: 4px;
   color: var(--muted);
   font-size: 13px;
 }
 
-.task-card p,
-.flash-card p {
+.task-card p {
   margin: 0;
   color: var(--muted);
   line-height: 1.45;
@@ -480,7 +475,7 @@ h2 {
   border-color: color-mix(in srgb, var(--danger) 34%, var(--line));
 }
 
-.mini-lists .cards-list {
+.mini-lists .record-list {
   max-height: 360px;
   overflow: auto;
 }
@@ -625,37 +620,6 @@ th {
   min-width: 180px;
 }
 
-.deck-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 10px;
-}
-
-.deck-card {
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 12px;
-  background: var(--surface-2);
-}
-
-.deck-card strong,
-.deck-card span {
-  display: block;
-}
-
-.deck-card span {
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.deck-cloud {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
-}
-
 .sim-form input[name$="Questions"],
 .sim-form input[name$="Correct"] {
   min-width: 0;
@@ -704,14 +668,6 @@ th {
 .button-row {
   flex-wrap: wrap;
   gap: 8px;
-}
-
-.flash-card.hard {
-  border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
-}
-
-.flash-card.medium {
-  border-color: color-mix(in srgb, var(--warning) 35%, var(--line));
 }
 
 .bar-row {
@@ -912,6 +868,207 @@ th {
 
   .form,
   .form.compact {
+    grid-template-columns: 1fr;
+  }
+}
+
+.auth-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--bg);
+}
+
+.auth-card {
+  width: min(520px, 100%);
+  display: grid;
+  gap: 18px;
+  padding: 26px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.auth-brand {
+  margin-bottom: 4px;
+}
+
+.auth-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.auth-tabs button {
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.auth-tabs button.active {
+  background: var(--brand);
+  color: #061016;
+}
+
+.form-message {
+  min-height: 20px;
+  margin: 0;
+  color: var(--warning);
+}
+
+.hero-plan {
+  border-color: color-mix(in srgb, var(--brand) 34%, var(--line));
+}
+
+.plan-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.plan-grid > div,
+.day-card {
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.plan-grid small,
+.day-card small {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--muted);
+}
+
+.plan-grid strong {
+  display: block;
+  line-height: 1.35;
+}
+
+.compact-plan {
+  grid-template-columns: 1fr;
+  margin: 20px;
+}
+
+.task-checklist,
+.quick-actions,
+.week-planner {
+  display: grid;
+  gap: 10px;
+}
+
+.task-checklist {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 16px;
+}
+
+.task-check {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  font-weight: 800;
+}
+
+.task-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--brand);
+}
+
+.quick-actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 14px 0;
+}
+
+.week-planner {
+  grid-template-columns: repeat(7, minmax(190px, 1fr));
+  overflow-x: auto;
+}
+
+.day-card > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+
+.day-card p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.status-pill.concluido {
+  background: color-mix(in srgb, var(--brand) 25%, var(--surface));
+  color: var(--brand);
+}
+
+.status-pill.atrasado {
+  background: color-mix(in srgb, var(--danger) 20%, var(--surface));
+  color: var(--danger);
+}
+
+.status-pill.parcial,
+.status-pill.reprogramado {
+  background: color-mix(in srgb, var(--warning) 20%, var(--surface));
+  color: var(--warning);
+}
+
+.inline-alerts {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+
+.schedule-table th,
+.schedule-table td {
+  min-width: 150px;
+}
+
+.schedule-table th:nth-child(2),
+.schedule-table td:nth-child(2),
+.schedule-table th:nth-child(3),
+.schedule-table td:nth-child(3) {
+  min-width: 260px;
+}
+
+.anki-simple {
+  display: grid;
+  gap: 18px;
+  max-width: 560px;
+}
+
+.anki-simple strong {
+  font-size: 28px;
+}
+
+@media (max-width: 920px) {
+  .plan-grid,
+  .task-checklist,
+  .quick-actions,
+  .inline-alerts {
     grid-template-columns: 1fr;
   }
 }

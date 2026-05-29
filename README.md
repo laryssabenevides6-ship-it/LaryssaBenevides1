@@ -1,98 +1,48 @@
 # Med Study Brain
 
-Aplicativo web completo para organização de estudos de residência médica e USMLE/Step 1, com cronograma importado do arquivo `Cronograma corrigido oficial..xlsx`, revisão espaçada, flashcards, Anki, caderno de erros, sessões de questões, simulados e dashboard automático.
+Central diaria de execucao para Residencia BR e USMLE Step 1, com cronograma importado da planilha oficial, checklist por tarefa, registro de questoes, caderno de erros e dashboard.
 
 ## Funcionalidades
 
-- Cronograma diário automatizado com 585 itens importados da planilha.
-- Tela **Hoje** gerada automaticamente com aulas, revisões, flashcards, Anki, simulados e pendências.
-- Conclusão de aula gera revisões automáticas de 15 e 30 dias.
-- Flashcards com reagendamento automático por dificuldade.
-- Caderno de erros inteligente com geração de flashcards e revisões futuras.
-- Sessões de questões com cálculo de acerto, tempo médio e tendência.
-- Simulados com comparação automática contra resultados anteriores.
-- Dashboard com progresso geral, pontos fracos, alertas, rankings e gráficos.
-- Cronômetro vinculado à matéria/tema com salvamento automático.
-- Persistência em `localStorage`, exportação/importação JSON e restauração do backup.
-- Modo claro/escuro e layout responsivo.
+- Cadastro, login, logout, recuperacao e alteracao de senha.
+- Dados separados por usuario no navegador: cronograma, checklist, questoes, simulados, erros, lousa semanal, preferencias e estatisticas.
+- Home na ordem operacional: Hoje - Plano do dia, botoes rapidos, Lousa Semanal, Planejamento da Semana, Alertas e resumo simples.
+- Checklist diario independente para MEDCOF, B&B/Step 1, questoes, Anki, revisao de erros e interleaving.
+- Status automatico: Nao iniciado, Parcial, Concluido, Atrasado e Reprogramado.
+- Anki simplificado como tarefa diaria: Feito ou Pendente.
+- Registro de questoes feitas com fonte, modo, selecao, formato, prova-alvo, materia, sistema, tema, numero de questoes, acertos, percentual, tempo total e tempo medio.
+- Caderno de erros como banco de revisao, com status Aberto, Revisado, Resolvido e Recorrente.
+- Alertas inteligentes para aulas atrasadas, Anki pendente, tarefas incompletas, erros antigos, poucas questoes na semana e simulados proximos.
+- Backup JSON, importacao, restauracao e modo claro/escuro.
 
-## Estrutura
+## Observacao de autenticacao
 
-```text
-.
-├── index.html
-├── public/
-├── src/
-│   ├── modules/
-│   │   ├── app.js
-│   │   ├── engine.js
-│   │   ├── storage.js
-│   │   └── utils.js
-│   └── styles/app.css
-├── public/data/cronograma.json
-├── package.json
-├── vercel.json
-├── netlify.toml
-├── firebase.json
-└── .gitignore
-```
+A versao atual e uma aplicacao Vite estatica. A autenticacao e persistencia ficam no `localStorage`, com chaves separadas por usuario no mesmo navegador. Para uso publico real com multiplos dispositivos e isolamento de servidor, o projeto esta pronto para receber Firebase Auth + Firestore ou outro backend.
 
 ## Rodar localmente
 
-Instale as dependências:
-
 ```bash
 npm install
-```
-
-Rode o ambiente de desenvolvimento:
-
-```bash
 npm run dev
 ```
 
-Acesse:
-
-```text
-http://localhost:5173
-```
-
-Build de produção:
+Build de producao:
 
 ```bash
 npm run build
-```
-
-O build gera a pasta:
-
-```text
-dist/
-```
-
-Pré-visualização do build:
-
-```bash
 npm run preview
 ```
+
+O build gera a pasta `dist/`.
 
 ## Deploy
 
 ### Vercel
 
-1. Envie este projeto para o GitHub.
-2. Importe o repositório na Vercel.
-3. Use framework preset **Vite**.
+1. Envie o projeto para o GitHub.
+2. Importe o repositorio na Vercel.
+3. Framework preset: `Vite`.
 4. Build command: `npm run build`.
 5. Output directory: `dist`.
-6. O arquivo `vercel.json` já está pronto.
 
-### Netlify
-
-1. Envie para o GitHub.
-2. Crie um novo site a partir do repositório.
-3. Build command vazio.
-4. Publish directory: `.`
-
-### Firebase Hosting
-
-Use a raiz do projeto como diretório público.
+O arquivo `vercel.json` ja esta configurado.
