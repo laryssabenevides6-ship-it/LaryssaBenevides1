@@ -359,7 +359,7 @@ function scheduleRow(day) {
     <td>${day.secondaryBlock || day.dailyFocus || "-"}</td>
     ${["medcof", "step", "questions", "anki", "errors", "interleaving"].map((key) => `<td>${taskStatus(day, key)}</td>`).join("")}
     <td><span class="status-pill ${statusClass(day.status)}">${day.status}</span></td>
-    <td><button class="secondary-button" data-open-day="${day.id}">Iniciar estudo</button></td>
+    <td><button class="secondary-button details-button" data-open-day="${day.id}">Detalhes de hoje</button></td>
   </tr>`;
 }
 
@@ -605,18 +605,34 @@ function bindView() {
 function openDayModal(dayId) {
   const day = state.schedule.find((item) => item.id === dayId);
   if (!day) return;
-  $("#modalContent").innerHTML = `<div class="section-title"><h2>${fmtDate(day.date)}</h2><span>${day.status}</span></div>
-    <div class="plan-grid compact-plan">
-      <div><small>MEDCOF</small><strong>${day.medcofClass}</strong></div>
-      <div><small>B&B</small><strong>${day.stepClass}</strong></div>
-      <div><small>Questoes</small><strong>${day.plannedQuestions}</strong></div>
-      <div><small>Interleaving</small><strong>${day.secondaryBlock || day.dailyFocus}</strong></div>
+  $("#modalContent").innerHTML = `<div class="modal-day">
+    <div class="modal-day-header">
+      <div>
+        <p class="eyebrow">Detalhes de hoje</p>
+        <h2>${fmtDate(day.date)}</h2>
+      </div>
+      <span class="status-pill ${statusClass(day.status)}">${day.status}</span>
     </div>
-    <div class="modal-study-timers">
-      ${["medcof", "step", "interleaving"].map((key) => `<article><strong>${taskLabel(key)}</strong>${studyTimerControls(day, key)}</article>`).join("")}
+    <div class="day-progress-card">
+      <div><span>Progresso do dia</span><strong>${taskCompletion(day)}%</strong></div>
+      <div class="day-progress-bar"><i style="width:${taskCompletion(day)}%"></i></div>
     </div>
-    <div class="task-checklist">${TASKS.map(([key, label]) => checkbox(day, key, label)).join("")}</div>
-    <form id="rescheduleForm" class="form compact"><input name="date" type="date" required /><button class="secondary-button">Reprogramar dia</button></form>`;
+    <div class="daily-detail-grid">
+      ${dailyDetailCard(day, "medcof", "Aula MEDCOF", day.medcofClass || "Sem aula MEDCOF")}
+      ${dailyDetailCard(day, "step", "Aula B&B / Step 1", day.stepClass || "Sem aula B&B")}
+      ${dailyDetailCard(day, "questions", "Questoes", day.plannedQuestions || "25 questoes planejadas")}
+      ${dailyDetailCard(day, "anki", "Anki", `Anki: ${day.tasks?.anki ? "Feito" : "Pendente"}`)}
+      ${dailyDetailCard(day, "errors", "Revisao de erros", day.errorReview || "Revisar erros abertos")}
+      ${dailyDetailCard(day, "interleaving", "Interleaving", day.secondaryBlock || day.dailyFocus || "Interleaving livre")}
+    </div>
+    <section class="modal-study-section">
+      <div class="section-title"><h2>Cronometro de estudo</h2><span>vinculado a aula</span></div>
+      <div class="modal-study-timers">
+        ${["medcof", "step", "interleaving"].map((key) => `<article><strong>${taskLabel(key)}</strong>${studyTimerControls(day, key)}</article>`).join("")}
+      </div>
+    </section>
+    <form id="rescheduleForm" class="form compact modal-reschedule"><input name="date" type="date" required /><button class="secondary-button">Reprogramar dia</button></form>
+  </div>`;
   if (!$("#modal").open) $("#modal").showModal();
   $("#modalContent").querySelectorAll("[data-task]").forEach((input) =>
     input.addEventListener("change", () => {
@@ -633,6 +649,18 @@ function openDayModal(dayId) {
     persistRender();
   });
   $("#modalContent").querySelectorAll("[data-action]").forEach((button) => button.addEventListener("click", handleAction));
+}
+
+function dailyDetailCard(day, key, title, content) {
+  const done = Boolean(day.tasks?.[key]);
+  return `<article class="daily-detail-card ${done ? "done" : ""}">
+    <label class="task-check daily-check">
+      <input type="checkbox" data-day-id="${day.id}" data-task="${key}" ${done ? "checked" : ""} />
+      <span>${title}</span>
+    </label>
+    <p>${content}</p>
+    <strong class="status-pill ${done ? "concluido" : "pendente"}">${done ? "Feito" : "Pendente"}</strong>
+  </article>`;
 }
 
 function handleAction(event) {

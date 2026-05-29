@@ -1070,7 +1070,7 @@ th {
 }
 
 .modal {
-  width: min(720px, calc(100vw - 28px));
+  width: min(980px, calc(100vw - 28px));
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 0;
@@ -1099,6 +1099,101 @@ th {
   margin: 0;
   border: 0;
   box-shadow: none;
+}
+
+.modal-day {
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+}
+
+.modal-day-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  padding-right: 44px;
+}
+
+.modal-day-header h2 {
+  font-size: 24px;
+}
+
+.day-progress-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.day-progress-card span,
+.daily-detail-card p {
+  color: var(--muted);
+}
+
+.day-progress-card strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 28px;
+}
+
+.day-progress-bar {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.day-progress-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--brand), var(--brand-2));
+}
+
+.daily-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.daily-detail-card {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  min-height: 146px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.daily-detail-card.done {
+  border-color: color-mix(in srgb, var(--brand) 38%, var(--line));
+}
+
+.daily-detail-card p {
+  min-height: 42px;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.daily-check {
+  min-height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.modal-study-section {
+  display: grid;
+  gap: 0;
+}
+
+.modal-reschedule {
+  margin-top: 2px;
 }
 
 @media (max-width: 1120px) {
@@ -1355,7 +1450,7 @@ th {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  margin: 0 20px 18px;
+  margin: 0;
 }
 
 .modal-study-timers article {
@@ -1468,6 +1563,12 @@ th {
   min-width: 260px;
 }
 
+.details-button {
+  width: 150px;
+  min-height: 54px;
+  white-space: normal;
+}
+
 .schedule-shell {
   display: grid;
   grid-template-columns: 315px minmax(0, 1fr);
@@ -1576,6 +1677,7 @@ th {
   .plan-grid,
   .task-checklist,
   .modal-study-timers,
+  .daily-detail-grid,
   .quick-actions,
   .inline-alerts {
     grid-template-columns: 1fr;
