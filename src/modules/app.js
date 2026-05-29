@@ -387,37 +387,71 @@ function serializeBoardFromDOM() {
 }
 
 function renderQuestions(d) {
-  return `<div class="grid metrics">
-      ${metric("Questoes", d.totalQuestions, "registradas")}
-      ${metric("Acertos", `${d.accuracy}%`, "geral")}
-      ${metric("Semana", d.weekQuestions, "ultimos 7 dias")}
-      ${metric("Horas", `${d.hours}h`, "questoes e simulados")}
+  return `<section class="questions-hero panel">
+      <div>
+        <p class="eyebrow">Execucao de questoes</p>
+        <h2>Registre primeiro o bloco que voce acabou de fazer</h2>
+        <p class="muted">Preencha de cima para baixo: contexto, assunto e resultado. O percentual e o tempo medio aparecem automaticamente.</p>
+      </div>
+      <div class="grid metrics compact-metrics">
+        ${metric("Questoes", d.totalQuestions, "registradas")}
+        ${metric("Acertos", `${d.accuracy}%`, "geral")}
+        ${metric("Semana", d.weekQuestions, "ultimos 7 dias")}
+        ${metric("Horas", `${d.hours}h`, "questoes e simulados")}
+      </div>
+    </section>
+    <div class="questions-layout">
+      <section class="panel questions-main">${questionsForm()}</section>
+      <aside class="panel questions-side">
+        <div class="section-title"><h2>Resumo deste bloco</h2><span>ao vivo</span></div>
+        <div class="result-preview">
+          <div><span>Percentual</span><strong id="qAccuracyPreview">-</strong></div>
+          <div><span>Tempo medio</span><strong id="qAvgPreview">-</strong></div>
+          <div><span>Volume</span><strong id="qVolumePreview">0 questoes</strong></div>
+        </div>
+        <div class="study-hint">
+          <strong>Como usar</strong>
+          <p>Use "Tutor" para aprender, "Teste" para medir desempenho e "Revisao de erros" quando estiver atacando pontos fracos.</p>
+        </div>
+      </aside>
     </div>
-    <div class="two-col">
-      <section class="panel">${questionsForm()}</section>
-      <section class="panel">${simulationForm()}</section>
-    </div>
-    <section class="panel"><div class="section-title"><h2>Historico</h2><span>questoes feitas</span></div>${historyList(state.sessions.slice(-12).reverse())}</section>`;
+    <section class="panel simulation-panel">${simulationForm()}</section>
+    <section class="panel"><div class="section-title"><h2>Historico recente</h2><span>ultimos registros</span></div>${historyList(state.sessions.slice(-8).reverse())}</section>`;
 }
 
 function questionsForm() {
-  return `<div class="section-title"><h2>Registrar questoes feitas</h2><span>calculo automatico</span></div>
-  <form id="questionsForm" class="form">
-    ${select("source", ["MEDCOF", "UWorld", "Prova antiga", "Outro"], "Fonte")}
-    ${select("mode", ["Tutor", "Teste"], "Modo")}
-    ${select("selection", ["Por assunto", "Por sistema", "Random/misto", "Revisao de erros"], "Selecao")}
-    ${select("format", ["Bloco comum", "Simulado completo"], "Formato")}
-    ${select("target", ["Residencia BR", "Step 1", "Ambos"], "Prova-alvo")}
-    <input name="subject" placeholder="Materia" required />
-    <input name="system" placeholder="Sistema" required />
-    <input name="topic" placeholder="Tema" />
-    <input name="questions" type="number" min="1" placeholder="Numero de questoes" required />
-    <input name="correct" type="number" min="0" placeholder="Acertos" required />
-    <input name="accuracy" readonly placeholder="Percentual" />
-    <input name="minutes" type="number" min="0" placeholder="Tempo total em minutos" required />
-    <input name="avgTime" readonly placeholder="Tempo medio por questao" />
-    <textarea name="notes" placeholder="Observacoes"></textarea>
-    <button class="primary-button" type="submit">Registrar questoes feitas</button>
+  return `<div class="section-title"><h2>Registrar questoes feitas</h2><span>bloco comum</span></div>
+  <form id="questionsForm" class="guided-form">
+    <fieldset>
+      <legend>1. Contexto do bloco</legend>
+      <div class="form-grid three">
+        ${fieldSelect("source", "Fonte", ["MEDCOF", "UWorld", "Prova antiga", "Outro"])}
+        ${fieldSelect("mode", "Modo", ["Tutor", "Teste"])}
+        ${fieldSelect("target", "Prova-alvo", ["Residencia BR", "Step 1", "Ambos"])}
+        ${fieldSelect("selection", "Selecao", ["Por assunto", "Por sistema", "Random/misto", "Revisao de erros"])}
+        ${fieldSelect("format", "Formato", ["Bloco comum", "Simulado completo"])}
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>2. Assunto estudado</legend>
+      <div class="form-grid three">
+        ${fieldInput("subject", "Materia", "Ex.: Cardiologia", "text", true)}
+        ${fieldInput("system", "Sistema", "Ex.: Cardiovascular", "text", true)}
+        ${fieldInput("topic", "Tema", "Ex.: Choque septico")}
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>3. Resultado</legend>
+      <div class="form-grid four">
+        ${fieldInput("questions", "Numero de questoes", "Ex.: 20", "number", true, 'min="1"')}
+        ${fieldInput("correct", "Acertos", "Ex.: 15", "number", true, 'min="0"')}
+        ${fieldInput("accuracy", "Percentual", "Calculado automaticamente", "text", false, "readonly")}
+        ${fieldInput("minutes", "Tempo total", "Minutos", "number", true, 'min="0"')}
+        ${fieldInput("avgTime", "Tempo medio por questao", "Calculado automaticamente", "text", false, "readonly")}
+      </div>
+    </fieldset>
+    <label class="field full-field"><span>Observacoes</span><textarea name="notes" placeholder="O que ficou dificil? Algum erro recorrente?"></textarea></label>
+    <button class="primary-button submit-main" type="submit">Registrar questoes feitas</button>
   </form>`;
 }
 
@@ -649,8 +683,13 @@ function updateQuestionCalculatedFields(event) {
   const questions = Number(form.questions.value) || 0;
   const correct = Number(form.correct.value) || 0;
   const minutes = Number(form.minutes.value) || 0;
-  form.accuracy.value = questions ? `${pct(correct, questions)}%` : "";
-  form.avgTime.value = questions ? `${Math.round((minutes * 60) / questions)} s/questao` : "";
+  const accuracy = questions ? `${pct(correct, questions)}%` : "";
+  const avg = questions ? `${Math.round((minutes * 60) / questions)} s/questao` : "";
+  form.accuracy.value = accuracy;
+  form.avgTime.value = avg;
+  $("#qAccuracyPreview") && ($("#qAccuracyPreview").textContent = accuracy || "-");
+  $("#qAvgPreview") && ($("#qAvgPreview").textContent = avg || "-");
+  $("#qVolumePreview") && ($("#qVolumePreview").textContent = `${questions} questoes`);
 }
 
 function checkbox(day, key, label) {
@@ -702,14 +741,42 @@ function simulationForm() {
     ["go", "GO"],
     ["preventiva", "Preventiva"]
   ];
-  return `<div class="section-title"><h2>Simulado completo</h2><span>por grande area</span></div>
-    <form id="simulationForm" class="form sim-form">
-      <input name="name" placeholder="Nome do simulado" />
-      <input name="minutes" type="number" min="0" placeholder="Tempo total em minutos" />
-      <input name="scheduledDate" type="date" title="Data programada do proximo simulado" />
-      ${areas.map(([key, label]) => `<input name="${key}Questions" type="number" min="0" placeholder="${label}: questoes" /><input name="${key}Correct" type="number" min="0" placeholder="${label}: acertos" />`).join("")}
-      <button class="primary-button" type="submit">Salvar simulado</button>
-    </form>`;
+  return `<details class="simulation-details">
+      <summary><div><strong>Simulado completo</strong><span>Abra somente quando for registrar prova inteira por grande area.</span></div></summary>
+      <form id="simulationForm" class="guided-form sim-form">
+        <fieldset>
+          <legend>Dados gerais</legend>
+          <div class="form-grid three">
+            ${fieldInput("name", "Nome do simulado", "Ex.: Simulado MEDCOF 01")}
+            ${fieldInput("minutes", "Tempo total", "Minutos", "number", false, 'min="0"')}
+            ${fieldInput("scheduledDate", "Proximo simulado", "", "date")}
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Desempenho por grande area</legend>
+          <div class="area-score-grid">
+            ${areas
+              .map(
+                ([key, label]) => `<div class="area-score">
+                  <strong>${label}</strong>
+                  <input name="${key}Questions" type="number" min="0" placeholder="Questoes" />
+                  <input name="${key}Correct" type="number" min="0" placeholder="Acertos" />
+                </div>`
+              )
+              .join("")}
+          </div>
+        </fieldset>
+        <button class="primary-button submit-main" type="submit">Salvar simulado</button>
+      </form>
+    </details>`;
+}
+
+function fieldInput(name, label, placeholder = "", type = "text", required = false, extra = "") {
+  return `<label class="field"><span>${label}</span><input name="${name}" type="${type}" placeholder="${placeholder}" ${required ? "required" : ""} ${extra} /></label>`;
+}
+
+function fieldSelect(name, label, options) {
+  return `<label class="field"><span>${label}</span><select name="${name}" required><option value="">Escolha</option>${options.map((option) => `<option>${option}</option>`).join("")}</select></label>`;
 }
 
 function simulationCompare() {

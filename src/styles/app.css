@@ -659,6 +659,218 @@ th {
   resize: vertical;
 }
 
+.questions-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 0.85fr);
+  gap: 18px;
+  align-items: center;
+  border-color: color-mix(in srgb, var(--brand) 30%, var(--line));
+}
+
+.questions-hero h2 {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.compact-metrics {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.compact-metrics .metric strong {
+  font-size: 24px;
+}
+
+.questions-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 18px;
+  align-items: start;
+}
+
+.questions-main {
+  border-color: color-mix(in srgb, var(--brand-2) 24%, var(--line));
+}
+
+.questions-side {
+  position: sticky;
+  top: 22px;
+}
+
+.guided-form {
+  display: grid;
+  gap: 16px;
+}
+
+.guided-form fieldset {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-2) 58%, var(--surface));
+}
+
+.guided-form legend {
+  padding: 0 8px;
+  color: var(--brand);
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.form-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.form-grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.form-grid.four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.field {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.field span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.field input,
+.field select,
+.field textarea,
+.area-score input {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  color: var(--text);
+  outline: 0;
+}
+
+.field input[readonly] {
+  border-color: color-mix(in srgb, var(--brand) 28%, var(--line));
+  background: color-mix(in srgb, var(--brand) 10%, var(--surface-2));
+  font-weight: 900;
+}
+
+.full-field {
+  grid-column: 1 / -1;
+}
+
+.full-field textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+
+.submit-main {
+  min-height: 48px;
+}
+
+.result-preview {
+  display: grid;
+  gap: 10px;
+}
+
+.result-preview div {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.result-preview span,
+.study-hint p {
+  color: var(--muted);
+}
+
+.result-preview span,
+.result-preview strong {
+  display: block;
+}
+
+.result-preview strong {
+  margin-top: 4px;
+  font-size: 26px;
+}
+
+.study-hint {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--brand-2) 10%, var(--surface));
+}
+
+.study-hint p {
+  margin: 8px 0 0;
+  line-height: 1.45;
+}
+
+.simulation-panel {
+  padding: 0;
+  overflow: hidden;
+}
+
+.simulation-details summary {
+  display: flex;
+  padding: 18px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.simulation-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.simulation-details summary div {
+  display: grid;
+  gap: 4px;
+}
+
+.simulation-details summary span {
+  color: var(--muted);
+}
+
+.simulation-details[open] summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.simulation-details form {
+  padding: 18px;
+}
+
+.area-score-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(130px, 1fr));
+  gap: 10px;
+  overflow-x: auto;
+}
+
+.area-score {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.area-score strong {
+  min-height: 38px;
+  line-height: 1.2;
+}
+
 .check {
   display: flex;
   gap: 9px;
@@ -832,8 +1044,11 @@ th {
 
   .alerts,
   .metrics,
+  .compact-metrics,
   .today-layout,
   .dashboard-grid,
+  .questions-hero,
+  .questions-layout,
   .two-col,
   .three-col,
   .split,
@@ -844,6 +1059,15 @@ th {
   .week-sidebar {
     position: static;
     max-height: 300px;
+  }
+
+  .questions-side {
+    position: static;
+  }
+
+  .form-grid.three,
+  .form-grid.four {
+    grid-template-columns: 1fr 1fr;
   }
 
   .wide {
@@ -873,7 +1097,9 @@ th {
   }
 
   .form,
-  .form.compact {
+  .form.compact,
+  .form-grid.three,
+  .form-grid.four {
     grid-template-columns: 1fr;
   }
 }
