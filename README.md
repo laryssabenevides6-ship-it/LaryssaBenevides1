@@ -8,6 +8,7 @@ Central diaria de execucao para Residencia BR e USMLE Step 1, com cronograma imp
 - Dados separados por usuario no navegador: cronograma, checklist, questoes, simulados, erros, lousa semanal, preferencias e estatisticas.
 - Home na ordem operacional: Hoje - Plano do dia, botoes rapidos, Lousa Semanal, Planejamento da Semana, Alertas e resumo simples.
 - Checklist diario independente para MEDCOF, B&B/Step 1, questoes, Anki, revisao de erros e interleaving.
+- Estudos fora do cronograma na aba Cronograma, com materia, sistema, tema, aula, observacoes e duracao contabilizada nas horas.
 - Status automatico: Nao iniciado, Parcial, Concluido, Atrasado e Reprogramado.
 - Anki simplificado como tarefa diaria: Feito ou Pendente.
 - Registro de questoes feitas com fonte, modo, selecao, formato, prova-alvo, materia, sistema, tema, numero de questoes, acertos, percentual, tempo total e tempo medio.

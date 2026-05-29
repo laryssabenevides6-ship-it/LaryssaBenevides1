@@ -88,6 +88,7 @@ export function freshState(scheduleItems = []) {
     },
     schedule: scheduleItems.map(normalizeScheduleItem),
     weeklyBoards: {},
+    outsideStudies: [],
     errors: [],
     sessions: [],
     simulations: [],
@@ -153,6 +154,7 @@ function migrate(state, scheduleItems = []) {
     preferences: { ...base.preferences, ...(state.preferences || {}) },
     schedule: schedule.map((item) => normalizeScheduleItem(item)),
     weeklyBoards: state.weeklyBoards || {},
+    outsideStudies: (state.outsideStudies || []).map(normalizeOutsideStudy),
     errors: (state.errors || []).map(normalizeError),
     sessions: state.sessions || [],
     simulations: state.simulations || [],
@@ -177,6 +179,20 @@ function normalizeScheduleItem(item) {
     rescheduledTo: item.rescheduledTo || "",
     completedAt: item.completedAt || "",
     movedToBacklog: Boolean(item.movedToBacklog)
+  };
+}
+
+function normalizeOutsideStudy(study) {
+  return {
+    id: study.id || `outside-${Date.now().toString(36)}`,
+    createdAt: study.createdAt || new Date().toISOString(),
+    date: study.date || todayISO(),
+    subject: study.subject || "Nao classificado",
+    system: study.system || "",
+    topic: study.topic || "",
+    lesson: study.lesson || "",
+    notes: study.notes || "",
+    minutes: Number(study.minutes) || 0
   };
 }
 

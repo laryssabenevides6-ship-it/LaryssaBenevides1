@@ -74,6 +74,28 @@ export function addQuestionSession(state, payload) {
   return state;
 }
 
+export function addOutsideStudy(state, payload) {
+  const minutes = Math.max(0, safeNumber(payload.minutes));
+  state.outsideStudies ||= [];
+  state.outsideStudies.push({
+    id: uid("outside"),
+    createdAt: new Date().toISOString(),
+    date: payload.date || todayISO(),
+    subject: payload.subject || "Nao classificado",
+    system: payload.system || "",
+    topic: payload.topic || "",
+    lesson: payload.lesson || "",
+    notes: payload.notes || "",
+    minutes
+  });
+  return state;
+}
+
+export function removeOutsideStudy(state, studyId) {
+  state.outsideStudies = (state.outsideStudies || []).filter((study) => study.id !== studyId);
+  return state;
+}
+
 export function addSimulation(state, payload) {
   const areas = ["Clinica Medica", "Cirurgia", "Pediatria", "GO", "Preventiva"];
   const areaBreakdown = areas.map((area) => {
@@ -141,7 +163,11 @@ export function getDerived(state, now = todayISO()) {
   const completedDays = schedule.filter((item) => item.status === "Concluido");
   const totalQuestions = state.sessions.reduce((sum, item) => sum + item.questions, 0);
   const totalCorrect = state.sessions.reduce((sum, item) => sum + item.correct, 0);
-  const totalMinutes = state.sessions.reduce((sum, item) => sum + item.minutes, 0) + state.simulations.reduce((sum, item) => sum + item.minutes, 0);
+  const outsideStudies = state.outsideStudies || [];
+  const totalMinutes =
+    state.sessions.reduce((sum, item) => sum + item.minutes, 0) +
+    state.simulations.reduce((sum, item) => sum + item.minutes, 0) +
+    outsideStudies.reduce((sum, item) => sum + item.minutes, 0);
   const openErrors = state.errors.filter((error) => error.status === "Aberto" || error.status === "Recorrente");
   const weekSessions = state.sessions.filter((item) => item.date >= addDays(now, -6) && item.date <= now);
   const weekQuestions = weekSessions.reduce((sum, item) => sum + item.questions, 0);
@@ -160,6 +186,8 @@ export function getDerived(state, now = todayISO()) {
     accuracy: pct(totalCorrect, totalQuestions),
     hours: Math.round((totalMinutes / 60) * 10) / 10,
     openErrors,
+    outsideStudies,
+    outsideHours: Math.round((outsideStudies.reduce((sum, item) => sum + item.minutes, 0) / 60) * 10) / 10,
     weekQuestions,
     alerts: buildAlerts(state, now, overdueDays, openErrors, weekQuestions),
     subjectPerformance: summarizeAccuracy(state.sessions, "subject"),

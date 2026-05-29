@@ -1,6 +1,7 @@
 import {
   TASKS,
   addError,
+  addOutsideStudy,
   addQuestionSession,
   addSimulation,
   dayLabel,
@@ -289,6 +290,11 @@ function renderSchedule(d) {
         ${weeklyBoardGrid(selectedScheduleWeek, board)}
       </section>
       <section class="panel">
+        <div class="section-title"><h2>Estudos fora do cronograma</h2><span>conta nas horas estudadas</span></div>
+        ${outsideStudyForm()}
+        <div class="record-list outside-study-list">${(state.outsideStudies || []).slice().reverse().slice(0, 6).map(outsideStudyCard).join("") || empty("Nenhum estudo fora do cronograma registrado.")}</div>
+      </section>
+      <section class="panel">
         <div class="section-title"><h2>${weekRangeTitle(selectedScheduleWeek, weekItems)}</h2><span>${weekItems.length} dia(s)</span></div>
         <div class="table-wrap">
           <table class="schedule-table">
@@ -464,7 +470,7 @@ function renderDashboard(d) {
       ${metric("Progresso", `${d.progress}%`, "dias concluidos")}
       ${metric("Questoes", d.totalQuestions, "total")}
       ${metric("Acertos", `${d.accuracy}%`, "geral")}
-      ${metric("Erros abertos", d.openErrors.length, "ativos")}
+      ${metric("Horas extra", `${d.outsideHours}h`, "fora do cronograma")}
     </div>
     <div class="dashboard-grid">
       <section class="panel">${barList(d.weekProgress, "Execucao da semana")}</section>
@@ -533,6 +539,7 @@ function bindView() {
   $("#questionsForm")?.addEventListener("input", updateQuestionCalculatedFields);
   $("#questionsForm")?.addEventListener("submit", handleQuestionsSubmit);
   $("#simulationForm")?.addEventListener("submit", handleSimulationSubmit);
+  $("#outsideStudyForm")?.addEventListener("submit", handleOutsideStudySubmit);
   $("#errorForm")?.addEventListener("submit", handleErrorSubmit);
   $("#passwordForm")?.addEventListener("submit", handlePasswordSubmit);
   $("#importFile")?.addEventListener("change", handleImport);
@@ -576,6 +583,7 @@ function handleAction(event) {
     state = setTask(state, event.currentTarget.dataset.dayId, "anki", !day?.tasks?.anki);
   }
   if (action === "toggle-errors") showAllErrors = !showAllErrors;
+  if (action === "remove-outside") state.outsideStudies = (state.outsideStudies || []).filter((study) => study.id !== event.currentTarget.dataset.studyId);
   if (action === "export") exportState(state);
   if (action === "reset" && confirm("Restaurar cronograma limpo para este usuario?")) state = resetState(user.id, seed);
   if (action === "logout") {
@@ -599,6 +607,13 @@ function handleQuestionsSubmit(event) {
 function handleSimulationSubmit(event) {
   event.preventDefault();
   state = addSimulation(state, Object.fromEntries(new FormData(event.currentTarget)));
+  event.currentTarget.reset();
+  persistRender();
+}
+
+function handleOutsideStudySubmit(event) {
+  event.preventDefault();
+  state = addOutsideStudy(state, Object.fromEntries(new FormData(event.currentTarget)));
   event.currentTarget.reset();
   persistRender();
 }
@@ -648,6 +663,28 @@ function errorCard(error) {
     <p>${error.summary}</p>
     <small>${error.type} · ${error.probableReason || "motivo nao informado"} · Proxima acao: ${error.nextAction}</small>
     <select data-error-status="${error.id}">${["Aberto", "Revisado", "Resolvido", "Recorrente"].map((status) => `<option ${status === error.status ? "selected" : ""}>${status}</option>`).join("")}</select>
+  </article>`;
+}
+
+function outsideStudyForm() {
+  return `<form id="outsideStudyForm" class="form compact outside-study-form">
+    <input name="date" type="date" value="${todayISO()}" required />
+    <input name="subject" placeholder="Materia" required />
+    <input name="system" placeholder="Sistema" />
+    <input name="topic" placeholder="Tema" />
+    <input name="lesson" placeholder="Aula estudada" />
+    <input name="minutes" type="number" min="1" placeholder="Duracao em minutos" required />
+    <textarea name="notes" placeholder="Observacoes"></textarea>
+    <button class="primary-button" type="submit">Adicionar estudo fora do cronograma</button>
+  </form>`;
+}
+
+function outsideStudyCard(study) {
+  return `<article class="task-card outside-study-card">
+    <div><strong>${study.lesson || study.topic || study.subject}</strong><span>${fmtDate(study.date)} · ${study.minutes} min</span></div>
+    <p>${study.subject}${study.system ? ` · ${study.system}` : ""}${study.topic ? ` · ${study.topic}` : ""}</p>
+    ${study.notes ? `<small>${study.notes}</small>` : ""}
+    <button class="danger-button" data-action="remove-outside" data-study-id="${study.id}">Remover</button>
   </article>`;
 }
 
