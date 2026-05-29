@@ -336,6 +336,12 @@ h2 {
   gap: 18px;
 }
 
+.three-col {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
 .panel {
   min-width: 0;
   padding: 18px;
@@ -460,6 +466,40 @@ h2 {
   background: var(--surface);
 }
 
+.week-select {
+  min-height: 40px;
+  min-width: min(360px, 100%);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.backlog-panel {
+  border-color: color-mix(in srgb, var(--danger) 34%, var(--line));
+}
+
+.mini-lists .cards-list {
+  max-height: 360px;
+  overflow: auto;
+}
+
+.weekly-board textarea {
+  width: 100%;
+  min-height: 160px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  resize: vertical;
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.outside-list {
+  margin-top: 14px;
+}
+
 .table-wrap {
   overflow: auto;
   border: 1px solid var(--line);
@@ -579,6 +619,46 @@ th {
   width: 18px;
   height: 18px;
   accent-color: var(--brand);
+}
+
+.compact-actions {
+  min-width: 180px;
+}
+
+.deck-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.deck-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--surface-2);
+}
+
+.deck-card strong,
+.deck-card span {
+  display: block;
+}
+
+.deck-card span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.deck-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.sim-form input[name$="Questions"],
+.sim-form input[name$="Correct"] {
+  min-width: 0;
 }
 
 .form {
@@ -799,6 +879,7 @@ th {
   .today-layout,
   .dashboard-grid,
   .two-col,
+  .three-col,
   .split {
     grid-template-columns: 1fr;
   }

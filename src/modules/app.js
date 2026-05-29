@@ -1,5 +1,8 @@
 import {
   addError,
+  addCustomDeck,
+  addManualFlashcard,
+  addOutsideStudy,
   addSimulation,
   addStudySession,
   answerFlashcard,
@@ -11,6 +14,7 @@ import {
   markErrorImportant,
   reopenLesson,
   runAutomations,
+  saveWeeklyBoard,
   saveTimerSession
 } from "./engine.js";
 import { exportState, importState, loadState, resetState, saveState } from "./storage.js";
@@ -33,6 +37,7 @@ let state;
 let currentView = "today";
 let timer = null;
 let timerTick = null;
+let selectedWeek = "";
 
 const $ = (selector) => document.querySelector(selector);
 const viewEl = $("#view");
@@ -48,6 +53,7 @@ async function init() {
   const data = await response.json();
   seed = data.items;
   state = runAutomations(loadState(seed));
+  selectedWeek = getCurrentWeekKey(state.schedule, todayISO());
   document.body.dataset.theme = state.preferences.theme;
   renderNav();
   bindShell();
@@ -90,17 +96,17 @@ function render() {
   renderAlerts(derived.alerts);
   const renderer = {
     today: renderToday,
-    schedule: renderSchedule,
-    questions: renderQuestions,
+    schedule: renderScheduleV2,
+    questions: renderQuestionsV2,
     errors: renderErrors,
-    flashcards: renderFlashcards,
+    flashcards: renderFlashcardsV2,
     anki: renderAnki,
-    dashboard: renderDashboard,
+    dashboard: renderDashboardV2,
     timer: renderTimer,
     settings: renderSettings
   }[currentView];
   viewEl.innerHTML = renderer(derived);
-  bindView();
+  bindViewV2();
 }
 
 function renderAlerts(alerts) {
@@ -675,3 +681,374 @@ function elapsed(startedAt) {
   const s = String(seconds % 60).padStart(2, "0");
   return `${h}:${m}:${s}`;
 }
+
+function renderScheduleV2(d) {
+  const q = searchTerm();
+  const filtered = state.schedule.filter((item) => matches(item, q)).sort((a, b) => a.date.localeCompare(b.date));
+  const weeks = groupScheduleByWeek(filtered);
+  if (!selectedWeek || !weeks.some(([week]) => week === selectedWeek)) selectedWeek = getCurrentWeekKey(filtered, d.now) || weeks[0]?.[0] || "";
+  const selectedItems = weeks.find(([week]) => week === selectedWeek)?.[1] || [];
+  const board = state.weeklyBoards?.[selectedWeek]?.content || "";
+  return `
+    <section class="panel backlog-panel">
+      <div class="section-title"><h2>Aulas Atrasadas</h2><span>aulas, revisoes e flashcards vencidos</span></div>
+      <div class="three-col mini-lists">
+        <div>${taskList(d.overdueLessons.slice(0, 8), "lesson")}</div>
+        <div>${reviewList(d.dueReviews.slice(0, 8))}</div>
+        <div>${cardQueueV2(d.dueCards.slice(0, 4))}</div>
+      </div>
+    </section>
+    <div class="toolbar">
+      <span>${weeks.length} semanas - ${filtered.length} aulas visiveis - ${d.overdueLessons.length} atrasadas - ${d.completed.length} concluidas</span>
+      <select id="weekSelect" class="week-select">
+        ${weeks.map(([week, items], index) => `<option value="${week}" ${week === selectedWeek ? "selected" : ""}>Semana ${index + 1} - ${fmtDate(items[0].date)} (${items.filter((item) => item.completed).length}/${items.length})</option>`).join("")}
+      </select>
+    </div>
+    <section class="panel weekly-board">
+      <div class="section-title"><h2>Lousa ${weekLabel(selectedWeek)}</h2><span>salva automaticamente</span></div>
+      <textarea id="weeklyBoard" placeholder="Anotacoes livres da semana, prioridades, pendencias, estrategia...">${escapeHtml(board)}</textarea>
+    </section>
+    <section class="panel">
+      <div class="section-title"><h2>Estudos Fora do Cronograma</h2><span>conta no Dashboard</span></div>
+      ${formOutsideStudy()}
+      <div class="cards-list outside-list">${(state.outsideStudies || []).slice(-4).reverse().map(outsideStudyCard).join("") || empty("Nenhum estudo extra registrado.")}</div>
+    </section>
+    <div class="weekly-schedule">
+      ${selectedItems.length ? scheduleWeekSectionV2(selectedWeek, selectedItems, d.now, true) : empty("Nenhuma semana selecionada.")}
+    </div>`;
+}
+
+function bindViewV2() {
+  viewEl.querySelectorAll("[data-complete-lesson]").forEach((button) =>
+    button.addEventListener("click", () => {
+      state = completeLesson(state, button.dataset.completeLesson);
+      persistRender();
+    })
+  );
+  viewEl.querySelectorAll("[data-toggle-lesson]").forEach((input) =>
+    input.addEventListener("change", () => {
+      state = input.checked ? completeLesson(state, input.dataset.toggleLesson) : reopenLesson(state, input.dataset.toggleLesson);
+      persistRender();
+    })
+  );
+  viewEl.querySelectorAll("[data-complete-review]").forEach((button) =>
+    button.addEventListener("click", () => {
+      state = completeReview(state, button.dataset.completeReview);
+      persistRender();
+    })
+  );
+  viewEl.querySelectorAll("[data-card]").forEach((button) =>
+    button.addEventListener("click", () => {
+      state = answerFlashcard(state, button.dataset.card, button.dataset.rating);
+      persistRender();
+    })
+  );
+  viewEl.querySelectorAll("[data-flash-error]").forEach((button) =>
+    button.addEventListener("click", () => {
+      state = flashcardFromError(state, button.dataset.flashError);
+      persistRender();
+    })
+  );
+  viewEl.querySelectorAll("[data-important-error]").forEach((button) =>
+    button.addEventListener("click", () => {
+      state = markErrorImportant(state, button.dataset.importantError);
+      persistRender();
+    })
+  );
+  viewEl.querySelectorAll("[data-start-lesson]").forEach((button) => button.addEventListener("click", () => startLessonStudy(button.dataset.startLesson)));
+  viewEl.querySelectorAll("[data-pause-timer]").forEach((button) => button.addEventListener("click", pauseLessonStudy));
+  viewEl.querySelectorAll("[data-finish-timer]").forEach((button) => button.addEventListener("click", finishLessonStudy));
+  viewEl.querySelectorAll("[data-action]").forEach((button) => button.addEventListener("click", handleAction));
+  $("#weekSelect")?.addEventListener("change", (event) => {
+    selectedWeek = event.target.value;
+    render();
+  });
+  $("#weeklyBoard")?.addEventListener("input", (event) => {
+    state = saveWeeklyBoard(state, selectedWeek, event.target.value);
+    saveState(state);
+  });
+  $("#outsideStudyForm")?.addEventListener("submit", handleOutsideStudySubmit);
+  $("#manualFlashcardForm")?.addEventListener("submit", handleManualFlashcardSubmit);
+  $("#customDeckForm")?.addEventListener("submit", handleCustomDeckSubmit);
+  $("#sessionForm")?.addEventListener("submit", handleSessionSubmit);
+  $("#simulationForm")?.addEventListener("submit", handleSimulationSubmit);
+  $("#errorForm")?.addEventListener("submit", handleErrorSubmit);
+  $("#timerForm")?.addEventListener("submit", handleTimerSubmit);
+  $("#importFile")?.addEventListener("change", handleImport);
+}
+
+function scheduleRowV2(item) {
+  const active = timer?.lessonId === item.id;
+  return `<tr class="${item.movedToBacklog ? "late-row" : ""}">
+    <td>
+      <label class="done-toggle">
+        <input type="checkbox" data-toggle-lesson="${item.id}" ${item.completed ? "checked" : ""} />
+        <span>${item.completed ? "Feito" : "Nao feito"}</span>
+      </label>
+    </td>
+    <td>${fmtDate(item.date)}</td>
+    <td>${item.area}</td>
+    <td>${item.medcofClass}</td>
+    <td>${item.stepClass}<br><small>${item.stepSystem}</small></td>
+    <td><span class="pill">${item.medcofPriority || item.monthlyPriority}</span></td>
+    <td>${item.status}</td>
+    <td>
+      <div class="button-row compact-actions">
+        ${active ? `<button class="secondary-button" data-pause-timer>${timer.pausedAt ? "Retomar" : "Pausar"}</button><button class="primary-button" data-finish-timer>Finalizar</button>` : `<button class="secondary-button" data-start-lesson="${item.id}">Iniciar estudo</button>`}
+      </div>
+    </td>
+  </tr>`;
+}
+
+function scheduleWeekSectionV2(week, items, now, open = false) {
+  const done = items.filter((item) => item.completed).length;
+  const late = items.filter((item) => item.movedToBacklog).length;
+  const first = items[0]?.date;
+  const last = items.at(-1)?.date;
+  return `<details class="week-card" ${open ? "open" : ""}>
+    <summary>
+      <div><strong>${weekLabel(week)}</strong><span>${fmtDate(first)} a ${fmtDate(last)}</span></div>
+      <div class="week-stats"><span>${done}/${items.length} feitas</span>${late ? `<span class="danger-text">${late} atrasadas</span>` : ""}</div>
+    </summary>
+    <div class="week-progress"><i style="width:${Math.round((done / items.length) * 100)}%"></i></div>
+    <div class="table-wrap compact-table">
+      <table>
+        <thead><tr><th>Feito</th><th>Data</th><th>Grande area</th><th>Aula</th><th>Step 1</th><th>Prioridade</th><th>Status</th><th>Estudo</th></tr></thead>
+        <tbody>${items.map((item) => scheduleRowV2(item)).join("")}</tbody>
+      </table>
+    </div>
+  </details>`;
+}
+
+function renderFlashcardsV2(d) {
+  return `
+    <div class="grid metrics">
+      ${metric("Total", d.flashcardStats.total, "cards criados")}
+      ${metric("Pendentes", d.flashcardStats.due, "fila de hoje")}
+      ${metric("Errei completamente", d.flashcardStats.again, "prioridade maxima")}
+      ${metric("Criados hoje", d.flashcardStats.createdToday, "novos cards")}
+    </div>
+    <div class="two-col">
+      <section class="panel">
+        <div class="section-title"><h2>Novo flashcard</h2><span>manual ou personalizado</span></div>
+        ${formManualFlashcard()}
+      </section>
+      <section class="panel">
+        <div class="section-title"><h2>Baralho personalizado</h2><span>${state.customDecks.length} criados</span></div>
+        ${formCustomDeck()}
+        <div class="deck-cloud">${state.customDecks.map((deck) => `<span class="pill">${deck}</span>`).join("") || empty("Nenhum baralho personalizado.")}</div>
+      </section>
+    </div>
+    <section class="panel">
+      <div class="section-title"><h2>Fila de revisao espacada</h2><span>prioridade automatica</span></div>
+      ${cardQueueV2(d.dueCards)}
+    </section>
+    <section class="panel">
+      <div class="section-title"><h2>Baralhos automaticos</h2><span>grande area, sistema, tema e origem</span></div>
+      <div class="deck-grid">${d.automaticDecks.map((deck) => `<article class="deck-card"><strong>${deck.name}</strong><span>${deck.type} - ${deck.count} cards</span></article>`).join("") || empty("Os baralhos aparecem conforme os cards sao criados.")}</div>
+    </section>
+    <section class="panel">
+      <div class="section-title"><h2>Todos os cards</h2><span>${state.flashcards.length} cards</span></div>
+      <div class="cards-list">${state.flashcards.map(deckCardV2).join("") || empty("Os flashcards serao criados a partir dos erros ou manualmente.")}</div>
+    </section>`;
+}
+
+function cardQueueV2(cards) {
+  if (!cards.length) return empty("Nenhum card pendente agora.");
+  return `<div class="cards-list">${cards
+    .map(
+      (card) => `<article class="flash-card ${card.difficulty}">
+        <div><strong>${card.front}</strong><span>${card.deck} - ${card.origin || "manual"} - ${fmtDate(card.nextReview)}</span></div>
+        <p>${card.back}</p>
+        <small>${card.area || card.subject} - ${card.system} - ${card.topic || "sem tema"} - ${card.reviewCount || 0} revisoes - ${card.accuracy || 0}% acerto</small>
+        <div class="button-row">
+          <button data-card="${card.id}" data-rating="again" class="danger-button">Errei completamente</button>
+          <button data-card="${card.id}" data-rating="hard" class="danger-button">Dificil</button>
+          <button data-card="${card.id}" data-rating="medium" class="secondary-button">Medio</button>
+          <button data-card="${card.id}" data-rating="easy" class="primary-button">Facil</button>
+        </div>
+      </article>`
+    )
+    .join("")}</div>`;
+}
+
+function renderQuestionsV2(d) {
+  return `
+    <div class="grid metrics">
+      ${metric("Questoes", d.totalQuestions, "total registrado")}
+      ${metric("Acertos", `${d.accuracy}%`, "taxa acumulada")}
+      ${metric("Sessoes", state.sessions.length, "blocos feitos")}
+      ${metric("Simulados", state.simulations.length, "comparados")}
+    </div>
+    <div class="two-col">
+      <section class="panel">${formSession()}</section>
+      <section class="panel">${formSimulationV2()}</section>
+    </div>
+    <section class="panel">
+      <div class="section-title"><h2>Historico recente</h2><span>evolucao temporal</span></div>
+      ${historyList([...state.sessions, ...state.simulations].slice(-10).reverse())}
+    </section>`;
+}
+
+function renderDashboardV2(d) {
+  return `
+    <div class="grid metrics">
+      ${metric("Progresso", `${d.progress}%`, "geral por aula")}
+      ${metric("Horas", `${d.hours}h`, "total")}
+      ${metric("Cards vencidos", d.flashcardStats.overdue, "flashcards")}
+      ${metric("Erros", state.errors.length, "registrados")}
+    </div>
+    <div class="dashboard-grid">
+      <section class="panel wide"><div class="section-title"><h2>Tendencia de desempenho</h2><span>${scoreLabel(d.accuracy)}</span></div>${lineChart(d.trend)}</section>
+      <section class="panel">${barList(d.weekProgress.slice(0, 10), "Progresso por semana")}</section>
+      <section class="panel">${barList(d.subjectProgress, "Progresso por materia")}</section>
+      <section class="panel">${barPairs(d.hoursByArea, "Horas por grande area")}</section>
+      <section class="panel">${barPairs(d.hoursBySystem, "Horas por sistema")}</section>
+      <section class="panel">${weakList(d.weakSubjects, "Ranking de fraqueza")}</section>
+      <section class="panel">${barPairs(d.errorsBySystem, "Erros por sistema")}</section>
+      <section class="panel">${simulationCompare()}</section>
+    </div>`;
+}
+
+function formOutsideStudy() {
+  return `<form id="outsideStudyForm" class="form compact">
+    <input name="date" type="date" value="${todayISO()}" />
+    <input name="area" placeholder="Grande area" required />
+    <input name="subject" placeholder="Materia" required />
+    <input name="system" placeholder="Sistema" />
+    <input name="topic" placeholder="Tema" />
+    <input name="lesson" placeholder="Aula" />
+    <input name="minutes" type="number" min="1" placeholder="Duracao em minutos" required />
+    <textarea name="notes" placeholder="Observacoes"></textarea>
+    <button class="primary-button" type="submit">Registrar estudo extra</button>
+  </form>`;
+}
+
+function formManualFlashcard() {
+  const decks = [...new Set([...(state.customDecks || []), "Clinica Medica", "Cirurgia", "Pediatria", "GO", "Preventiva"])];
+  return `<form id="manualFlashcardForm" class="form">
+    <input name="front" placeholder="Frente" required />
+    <input name="back" placeholder="Verso" required />
+    <input name="area" placeholder="Grande area" />
+    <input name="subject" placeholder="Materia" />
+    <input name="system" placeholder="Sistema" />
+    <input name="topic" placeholder="Tema" />
+    <input name="lessonTitle" placeholder="Aula relacionada" />
+    <select name="deck">${decks.map((deck) => `<option>${deck}</option>`).join("")}</select>
+    <button class="primary-button" type="submit">Criar flashcard</button>
+  </form>`;
+}
+
+function formCustomDeck() {
+  return `<form id="customDeckForm" class="form compact"><input name="deck" placeholder="Nome do baralho" required /><button class="primary-button" type="submit">Criar baralho</button></form>`;
+}
+
+function formSimulationV2() {
+  const areaInputs = [
+    ["clinicamedica", "Clinica Medica"],
+    ["cirurgia", "Cirurgia"],
+    ["pediatria", "Pediatria"],
+    ["go", "GO"],
+    ["preventiva", "Preventiva"]
+  ];
+  return `
+    <div class="section-title"><h2>Finalizar simulado</h2><span>por grande area</span></div>
+    <form id="simulationForm" class="form sim-form">
+      <input name="name" placeholder="Nome do simulado" />
+      <input name="minutes" type="number" min="1" placeholder="Minutos" />
+      ${areaInputs.map(([key, label]) => `<input name="${key}Questions" type="number" min="0" placeholder="${label}: questoes" /><input name="${key}Correct" type="number" min="0" placeholder="${label}: acertos" />`).join("")}
+      <input name="criticalThemes" placeholder="Temas criticos, separados por virgula" />
+      <button class="primary-button" type="submit">Salvar simulado</button>
+    </form>`;
+}
+
+function outsideStudyCard(study) {
+  return `<article class="task-card"><div><strong>${study.lesson || study.topic || study.subject}</strong><span>${fmtDate(study.date)} - ${study.area} - ${study.minutes} min</span></div><p>${study.notes || study.system || ""}</p></article>`;
+}
+
+function deckCardV2(card) {
+  return `<article class="task-card"><div><strong>${card.front}</strong><span>${card.deck} - ${card.difficulty} - ${card.origin || "manual"}</span></div><p>Proxima revisao: ${fmtDate(card.nextReview)} - intervalo ${card.interval}d - ${card.accuracy || 0}% acerto</p></article>`;
+}
+
+function handleOutsideStudySubmit(event) {
+  event.preventDefault();
+  state = addOutsideStudy(state, Object.fromEntries(new FormData(event.currentTarget)));
+  event.currentTarget.reset();
+  persistRender();
+}
+
+function handleManualFlashcardSubmit(event) {
+  event.preventDefault();
+  state = addManualFlashcard(state, Object.fromEntries(new FormData(event.currentTarget)));
+  event.currentTarget.reset();
+  persistRender();
+}
+
+function handleCustomDeckSubmit(event) {
+  event.preventDefault();
+  const data = Object.fromEntries(new FormData(event.currentTarget));
+  state = addCustomDeck(state, data.deck);
+  event.currentTarget.reset();
+  persistRender();
+}
+
+function startLessonStudy(lessonId) {
+  const lesson = state.schedule.find((item) => item.id === lessonId);
+  if (!lesson) return;
+  timer = {
+    lessonId: lesson.id,
+    week: lesson.week,
+    subject: lesson.area,
+    area: lesson.area,
+    system: lesson.stepSystem,
+    topic: lesson.medcofClass || lesson.stepClass,
+    startedAt: new Date().toISOString(),
+    pausedMs: 0,
+    pausedAt: ""
+  };
+  timerTick = setInterval(() => $("#timerDisplay") && ($("#timerDisplay").textContent = elapsed(timer.startedAt)), 1000);
+  render();
+}
+
+function pauseLessonStudy() {
+  if (!timer) return;
+  if (timer.pausedAt) {
+    timer.pausedMs += Date.now() - new Date(timer.pausedAt).getTime();
+    timer.pausedAt = "";
+  } else {
+    timer.pausedAt = new Date().toISOString();
+  }
+  render();
+}
+
+function finishLessonStudy() {
+  if (!timer) return;
+  if (timer.pausedAt) {
+    timer.pausedMs += Date.now() - new Date(timer.pausedAt).getTime();
+    timer.pausedAt = "";
+  }
+  timer.endedAt = new Date(Date.now() - (timer.pausedMs || 0)).toISOString();
+  clearInterval(timerTick);
+  state = saveTimerSession(state, timer);
+  timer = null;
+  persistRender();
+}
+
+function getCurrentWeekKey(items, now) {
+  return items.find((item) => item.date <= now && item.date >= now)?.week || items.find((item) => item.date >= now)?.week || items[0]?.week || "";
+}
+
+function escapeHtml(value) {
+  return String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+}
+
+renderSchedule = renderScheduleV2;
+bindView = bindViewV2;
+scheduleRow = scheduleRowV2;
+scheduleWeekSection = scheduleWeekSectionV2;
+renderFlashcards = renderFlashcardsV2;
+cardQueue = cardQueueV2;
+renderQuestions = renderQuestionsV2;
+renderDashboard = renderDashboardV2;
+formSimulation = formSimulationV2;
+deckCard = deckCardV2;
