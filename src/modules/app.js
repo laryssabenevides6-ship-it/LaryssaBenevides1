@@ -43,6 +43,8 @@ let seed = [];
 let state;
 let user;
 let currentView = "today";
+let selectedScheduleWeek = "";
+let showAllErrors = false;
 
 const $ = (selector) => document.querySelector(selector);
 
@@ -57,6 +59,7 @@ async function init() {
     return;
   }
   state = runAutomations(loadState(user.id, seed));
+  selectedScheduleWeek = getDerived(state).week;
   document.body.dataset.theme = state.preferences.theme;
   bindShell();
   renderNav();
@@ -199,7 +202,7 @@ function render() {
 
 function renderToday(d) {
   const day = d.today;
-  const board = state.weeklyBoards?.[d.week]?.content || "";
+  const board = state.weeklyBoards?.[`routine:${d.week}`]?.content || "";
   return `
     ${todayPlan(day, d.now)}
     <section class="quick-actions">
@@ -235,19 +238,29 @@ function todayPlan(day, now) {
   return `<section class="panel hero-plan">
     <div class="section-title"><h2>Hoje - Plano do dia</h2><span>${fmtDate(now)}</span></div>
     <div class="plan-grid">
-      <div><small>Aula MEDCOF do dia</small><strong>${day.medcofClass || "Sem aula MEDCOF"}</strong></div>
-      <div><small>Aula B&B / Step 1 do dia</small><strong>${day.stepClass || "Sem aula B&B"}</strong></div>
-      <div><small>Bloco secundario/interleaving</small><strong>${day.secondaryBlock || day.dailyFocus || "Interleaving livre"}</strong></div>
-      <div><small>Questoes planejadas</small><strong>${day.plannedQuestions || "25 questoes"}</strong></div>
-      <div><small>Anki obrigatorio</small><strong>Anki: ${day.tasks.anki ? "Feito" : "Pendente"}</strong></div>
-      <div><small>Revisao/caderno de erros</small><strong>${day.errorReview || "Revisar erros abertos"}</strong></div>
+      ${planTaskCard(day, "medcof", "Aula MEDCOF do dia", day.medcofClass || "Sem aula MEDCOF")}
+      ${planTaskCard(day, "step", "Aula B&B / Step 1 do dia", day.stepClass || "Sem aula B&B")}
+      ${planTaskCard(day, "interleaving", "Bloco secundario/interleaving", day.secondaryBlock || day.dailyFocus || "Interleaving livre")}
+      ${planTaskCard(day, "questions", "Questoes planejadas", day.plannedQuestions || "25 questoes")}
+      ${planTaskCard(day, "anki", "Anki obrigatorio", `Anki: ${day.tasks.anki ? "Feito" : "Pendente"}`)}
+      ${planTaskCard(day, "errors", "Revisao/caderno de erros", day.errorReview || "Revisar erros abertos")}
       <div><small>Tarefa minima</small><strong>${day.minimumTask || "Anki + aula principal + questoes"}</strong></div>
       <div><small>Plano normal</small><strong>${day.normalPlan || "Aulas + questoes + caderno de erros"}</strong></div>
       <div><small>Extra se der tempo</small><strong>${day.extraPlan || "Reforcar ponto fraco"}</strong></div>
       <div><small>Status geral do dia</small><strong class="status-pill ${statusClass(day.status)}">${day.status}</strong></div>
     </div>
-    <div class="task-checklist">${TASKS.map(([key, label]) => checkbox(day, key, label)).join("")}</div>
   </section>`;
+}
+
+function planTaskCard(day, key, label, value) {
+  return `<div class="plan-task-card ${day.tasks?.[key] ? "done" : ""}">
+    <label class="card-check" title="Marcar ${label}">
+      <input type="checkbox" data-day-id="${day.id}" data-task="${key}" ${day.tasks?.[key] ? "checked" : ""} />
+      <span></span>
+    </label>
+    <small>${label}</small>
+    <strong>${value}</strong>
+  </div>`;
 }
 
 function weekDayCard(day) {
@@ -261,16 +274,31 @@ function weekDayCard(day) {
 
 function renderSchedule(d) {
   const q = searchTerm();
-  const rows = state.schedule.filter((day) => matches(day, q)).sort((a, b) => a.date.localeCompare(b.date));
-  return `<section class="panel">
-    <div class="section-title"><h2>Cronograma</h2><span>status individual por tarefa</span></div>
-    <div class="table-wrap">
-      <table class="schedule-table">
-        <thead><tr>${["Data", "Aula MEDCOF", "Aula B&B", "Questoes", "Anki", "Revisao de erros", "Interleaving", "Status MEDCOF", "Status B&B", "Status Questoes", "Status Anki", "Status Revisao", "Status Interleaving", "Status geral", "Detalhes"].map((h) => `<th>${h}</th>`).join("")}</tr></thead>
-        <tbody>${rows.map(scheduleRow).join("")}</tbody>
-      </table>
+  const weeks = groupScheduleByWeek(state.schedule.filter((day) => matches(day, q)));
+  if (!selectedScheduleWeek || !weeks.some(([week]) => week === selectedScheduleWeek)) selectedScheduleWeek = weeks[0]?.[0] || d.week;
+  const weekItems = weeks.find(([week]) => week === selectedScheduleWeek)?.[1] || [];
+  const board = state.weeklyBoards?.[`schedule:${selectedScheduleWeek}`]?.content || "";
+  return `<div class="schedule-shell">
+    <aside class="week-sidebar panel">
+      <div class="section-title"><h2>Semanas</h2><span>${weeks.length}</span></div>
+      ${weeks.map(([week, items], index) => weekButton(week, items, index)).join("")}
+    </aside>
+    <div class="schedule-main">
+      <section class="panel weekly-board">
+        <div class="section-title"><h2>Lousa semanal - ${weekTitle(selectedScheduleWeek, weeks)}</h2><span>autosave local</span></div>
+        ${weeklyBoardGrid(selectedScheduleWeek, board)}
+      </section>
+      <section class="panel">
+        <div class="section-title"><h2>${weekRangeTitle(selectedScheduleWeek, weekItems)}</h2><span>${weekItems.length} dia(s)</span></div>
+        <div class="table-wrap">
+          <table class="schedule-table">
+            <thead><tr>${["Data", "Aula MEDCOF", "Aula B&B", "Questoes", "Anki", "Revisao de erros", "Interleaving", "Status MEDCOF", "Status B&B", "Status Questoes", "Status Anki", "Status Revisao", "Status Interleaving", "Status geral", "Detalhes"].map((h) => `<th>${h}</th>`).join("")}</tr></thead>
+            <tbody>${weekItems.map(scheduleRow).join("") || `<tr><td colspan="15">${empty("Nenhum dia nesta semana.")}</td></tr>`}</tbody>
+          </table>
+        </div>
+      </section>
     </div>
-  </section>`;
+  </div>`;
 }
 
 function scheduleRow(day) {
@@ -286,6 +314,70 @@ function scheduleRow(day) {
     <td><span class="status-pill ${statusClass(day.status)}">${day.status}</span></td>
     <td><button class="secondary-button" data-open-day="${day.id}">Iniciar estudo</button></td>
   </tr>`;
+}
+
+function groupScheduleByWeek(items) {
+  const groups = new Map();
+  items
+    .slice()
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .forEach((day) => {
+      if (!groups.has(day.week)) groups.set(day.week, []);
+      groups.get(day.week).push(day);
+    });
+  return [...groups.entries()];
+}
+
+function weekButton(week, items, index) {
+  return `<button class="${week === selectedScheduleWeek ? "active" : ""}" data-week-select="${week}">
+    <strong>Semana ${index + 1}</strong>
+    <span>${fmtDate(items[0]?.date)} a ${fmtDate(items.at(-1)?.date)}</span>
+    <small>${items.filter((item) => item.status === "Concluido").length}/${items.length} concluido(s)</small>
+  </button>`;
+}
+
+function weekTitle(week, weeks) {
+  const index = weeks.findIndex(([key]) => key === week);
+  return index >= 0 ? `Semana ${index + 1}` : "Semana";
+}
+
+function weekRangeTitle(week, items) {
+  if (!items.length) return "Semana selecionada";
+  return `${fmtDate(items[0].date)} - ${fmtDate(items.at(-1).date)}`;
+}
+
+function weeklyBoardGrid(week, rawContent) {
+  const data = parseBoard(rawContent);
+  const periods = ["Manha", "Tarde", "Noite"];
+  const days = ["Segunda", "Terca", "Quarta", "Quinta", "Sexta", "Sabado", "Domingo"];
+  return `<div class="board-grid" data-board-week="${week}">
+    ${periods
+      .map(
+        (period) => `<div class="board-period">${period}</div>${days
+          .map((day) => `<label class="board-cell"><span>${day}</span><textarea data-board-cell="${period}.${day}" placeholder="${day} ${period.toLowerCase()}">${escapeHtml(data[period]?.[day] || "")}</textarea></label>`)
+          .join("")}`
+      )
+      .join("")}
+  </div>`;
+}
+
+function parseBoard(rawContent) {
+  try {
+    const parsed = JSON.parse(rawContent || "{}");
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return { Manha: { Segunda: rawContent || "" } };
+  }
+}
+
+function serializeBoardFromDOM() {
+  const data = {};
+  document.querySelectorAll("[data-board-cell]").forEach((cell) => {
+    const [period, day] = cell.dataset.boardCell.split(".");
+    data[period] ||= {};
+    data[period][day] = cell.value;
+  });
+  return JSON.stringify(data);
 }
 
 function renderQuestions(d) {
@@ -324,12 +416,18 @@ function questionsForm() {
 }
 
 function renderErrors(d) {
+  const sortedErrors = state.errors.slice().reverse();
+  const visibleErrors = showAllErrors ? sortedErrors : sortedErrors.slice(0, 4);
   return `<div class="two-col">
     <section class="panel">${errorForm()}</section>
     <section class="panel">${barList(d.systemPerformance, "Sistemas mais fracos")}</section>
   </div>
-  <section class="panel"><div class="section-title"><h2>Caderno de erros</h2><span>banco de revisao posterior</span></div>
-    <div class="record-list">${state.errors.slice().reverse().map(errorCard).join("") || empty("Nenhum erro registrado.")}</div>
+  <section class="panel"><div class="section-title"><h2>Caderno de erros</h2><span>${state.errors.length} erro(s)</span></div>
+    <div class="errors-toolbar">
+      <p class="muted">Mostrando ${visibleErrors.length} de ${state.errors.length}. A lista completa fica recolhida para manter a tela limpa.</p>
+      ${state.errors.length > 4 ? `<button class="secondary-button" data-action="toggle-errors">${showAllErrors ? "Mostrar menos" : "Ver lista completa"}</button>` : ""}
+    </div>
+    <div class="record-list errors-list ${showAllErrors ? "expanded" : ""}">${visibleErrors.map(errorCard).join("") || empty("Nenhum erro registrado.")}</div>
   </section>`;
 }
 
@@ -357,7 +455,7 @@ function renderAnki(d) {
   return `<section class="panel anki-simple">
     <div class="section-title"><h2>Anki obrigatorio</h2><span>tarefa diaria simples</span></div>
     <strong>Anki: ${day?.tasks?.anki ? "Feito" : "Pendente"}</strong>
-    <button class="primary-button" data-action="mark-anki" data-day-id="${day?.id || ""}">Marcar Anki como feito</button>
+    <button class="${day?.tasks?.anki ? "secondary-button" : "primary-button"}" data-action="toggle-anki" data-day-id="${day?.id || ""}">${day?.tasks?.anki ? "Desmarcar Anki" : "Marcar Anki como feito"}</button>
   </section>`;
 }
 
@@ -408,6 +506,12 @@ function bindView() {
     })
   );
   document.querySelectorAll("[data-open-day]").forEach((button) => button.addEventListener("click", () => openDayModal(button.dataset.openDay)));
+  document.querySelectorAll("[data-week-select]").forEach((button) =>
+    button.addEventListener("click", () => {
+      selectedScheduleWeek = button.dataset.weekSelect;
+      render();
+    })
+  );
   document.querySelectorAll("[data-error-status]").forEach((selectEl) =>
     selectEl.addEventListener("change", () => {
       state = updateErrorStatus(state, selectEl.dataset.errorStatus, selectEl.value);
@@ -416,10 +520,16 @@ function bindView() {
   );
   document.querySelectorAll("[data-action]").forEach((button) => button.addEventListener("click", handleAction));
   $("#weeklyBoard")?.addEventListener("input", (event) => {
-    const week = getDerived(state).week;
+    const week = `routine:${getDerived(state).week}`;
     state = saveWeeklyBoard(state, week, event.target.value);
     saveState(user.id, state);
   });
+  document.querySelectorAll("[data-board-cell]").forEach((cell) =>
+    cell.addEventListener("input", () => {
+      state = saveWeeklyBoard(state, `schedule:${selectedScheduleWeek}`, serializeBoardFromDOM());
+      saveState(user.id, state);
+    })
+  );
   $("#questionsForm")?.addEventListener("input", updateQuestionCalculatedFields);
   $("#questionsForm")?.addEventListener("submit", handleQuestionsSubmit);
   $("#simulationForm")?.addEventListener("submit", handleSimulationSubmit);
@@ -461,7 +571,11 @@ function handleAction(event) {
   const action = event.currentTarget.dataset.action;
   if (action === "goto-questions") currentView = "questions";
   if (action === "goto-errors") currentView = "errors";
-  if (action === "mark-anki") state = setTask(state, event.currentTarget.dataset.dayId, "anki", true);
+  if (action === "mark-anki" || action === "toggle-anki") {
+    const day = state.schedule.find((item) => item.id === event.currentTarget.dataset.dayId);
+    state = setTask(state, event.currentTarget.dataset.dayId, "anki", !day?.tasks?.anki);
+  }
+  if (action === "toggle-errors") showAllErrors = !showAllErrors;
   if (action === "export") exportState(state);
   if (action === "reset" && confirm("Restaurar cronograma limpo para este usuario?")) state = resetState(user.id, seed);
   if (action === "logout") {

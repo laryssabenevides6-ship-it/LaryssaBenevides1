@@ -366,7 +366,7 @@ h2 {
   gap: 10px;
 }
 
-.task-card,
+.task-card {
   display: grid;
   gap: 10px;
   padding: 13px;
@@ -836,8 +836,14 @@ th {
   .dashboard-grid,
   .two-col,
   .three-col,
-  .split {
+  .split,
+  .schedule-shell {
     grid-template-columns: 1fr;
+  }
+
+  .week-sidebar {
+    position: static;
+    max-height: 300px;
   }
 
   .wide {
@@ -937,6 +943,50 @@ th {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface-2);
+}
+
+.plan-task-card {
+  position: relative;
+  padding-right: 58px !important;
+}
+
+.plan-task-card.done {
+  border-color: color-mix(in srgb, var(--brand) 42%, var(--line));
+}
+
+.card-check {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  display: grid;
+  place-items: center;
+}
+
+.card-check input {
+  position: absolute;
+  opacity: 0;
+}
+
+.card-check span {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+}
+
+.card-check input:checked + span {
+  border-color: var(--brand);
+  background: var(--brand);
+}
+
+.card-check input:checked + span::after {
+  content: "OK";
+  color: #061016;
+  font-size: 10px;
+  font-weight: 900;
 }
 
 .plan-grid small,
@@ -1052,6 +1102,100 @@ th {
 .schedule-table th:nth-child(3),
 .schedule-table td:nth-child(3) {
   min-width: 260px;
+}
+
+.schedule-shell {
+  display: grid;
+  grid-template-columns: 315px minmax(0, 1fr);
+  gap: 18px;
+}
+
+.schedule-main {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+.week-sidebar {
+  align-self: start;
+  position: sticky;
+  top: 20px;
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+}
+
+.week-sidebar button {
+  width: 100%;
+  display: grid;
+  gap: 3px;
+  margin-bottom: 8px;
+  padding: 13px 14px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  text-align: left;
+}
+
+.week-sidebar button.active {
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
+  background: color-mix(in srgb, var(--danger) 28%, var(--surface-2));
+}
+
+.week-sidebar button span,
+.week-sidebar button small {
+  color: var(--muted);
+}
+
+.board-grid {
+  display: grid;
+  grid-template-columns: 100px repeat(7, minmax(130px, 1fr));
+  gap: 10px;
+  overflow-x: auto;
+}
+
+.board-period {
+  display: grid;
+  place-items: center;
+  min-height: 108px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--danger) 13%, var(--surface-2));
+  color: color-mix(in srgb, var(--danger) 24%, var(--text));
+  font-weight: 900;
+}
+
+.board-cell {
+  display: grid;
+  gap: 5px;
+  min-width: 130px;
+}
+
+.board-cell span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.board-cell textarea {
+  min-height: 108px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  resize: vertical;
+  background: #050817;
+  color: var(--text);
+}
+
+.errors-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.errors-toolbar p {
+  margin: 0;
 }
 
 .anki-simple {
