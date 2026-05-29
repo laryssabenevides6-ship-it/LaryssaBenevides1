@@ -203,17 +203,12 @@ function render() {
 
 function renderToday(d) {
   const day = d.today;
-  const board = state.weeklyBoards?.[`routine:${d.week}`]?.content || "";
   return `
     ${todayPlan(day, d.now)}
     <section class="quick-actions">
       <button class="primary-button" data-action="goto-questions">Registrar questoes feitas</button>
       <button class="secondary-button" data-action="goto-errors">Registrar erro</button>
       <button class="secondary-button" data-action="mark-anki" data-day-id="${day?.id || ""}">Anki: ${day?.tasks?.anki ? "Feito" : "Pendente"}</button>
-    </section>
-    <section class="panel weekly-board">
-      <div class="section-title"><h2>Lousa Semanal - Minha rotina</h2><span>${d.week}</span></div>
-      <textarea id="weeklyBoard" placeholder="Horarios disponiveis, faculdade, internato, plantoes, academia, compromissos, provas, eventos e observacoes gerais.">${escapeHtml(board)}</textarea>
     </section>
     <section class="panel">
       <div class="section-title"><h2>Planejamento da Semana - Cronograma</h2><span>${d.weekDays.length} dias</span></div>
@@ -547,11 +542,6 @@ function bindView() {
     })
   );
   document.querySelectorAll("[data-action]").forEach((button) => button.addEventListener("click", handleAction));
-  $("#weeklyBoard")?.addEventListener("input", (event) => {
-    const week = `routine:${getDerived(state).week}`;
-    state = saveWeeklyBoard(state, week, event.target.value);
-    saveState(user.id, state);
-  });
   document.querySelectorAll("[data-board-cell]").forEach((cell) =>
     cell.addEventListener("input", () => {
       state = saveWeeklyBoard(state, `schedule:${selectedScheduleWeek}`, serializeBoardFromDOM());
