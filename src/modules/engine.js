@@ -347,13 +347,24 @@ function summarizeErrors(errors = [], now = todayISO()) {
   const open = errors.filter((error) => error.status === "Aberto");
   const resolved = errors.filter((error) => error.status === "Resolvido");
   const recurring = errors.filter((error) => error.status === "Recorrente");
-  const overdue = errors.filter((error) => error.reviewDate && error.reviewDate < now && !["Resolvido", "Revisado"].includes(error.status));
+  const dueToday = errors.filter((error) => error.reviewDate && error.reviewDate <= now && error.status !== "Resolvido");
   return {
     total: errors.length,
     open: open.length,
     resolved: resolved.length,
     recurring: recurring.length,
-    overdue: overdue.length,
+    overdue: dueToday.length,
+    dueToday: dueToday
+      .slice()
+      .sort((a, b) => a.reviewDate.localeCompare(b.reviewDate))
+      .map((error) => ({
+        id: error.id,
+        topic: error.topic || error.subject || "Sem tema",
+        reviewQuestion: error.reviewQuestion || error.summary || "Sem pergunta de revisao",
+        type: error.type || "Nao classificado",
+        severity: error.severity || "Nao informada",
+        status: error.status || "Aberto"
+      })),
     topics: topEntries(groupCount(errors, (error) => error.topic || "Sem tema"), 6).map(([label, value]) => ({ label, value })),
     byType: groupCount(errors, (error) => error.type),
     bySubject: groupCount(errors, (error) => error.subject),

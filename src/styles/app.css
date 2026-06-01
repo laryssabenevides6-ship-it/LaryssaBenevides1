@@ -1678,6 +1678,29 @@ th {
   gap: 16px;
 }
 
+.error-review-today {
+  margin-bottom: 18px;
+}
+
+.error-review-item {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.error-review-item p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.error-review-item small {
+  color: var(--muted);
+}
+
 .compact-title {
   margin-bottom: 8px;
 }

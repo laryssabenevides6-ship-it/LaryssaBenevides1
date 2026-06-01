@@ -1065,19 +1065,43 @@ function errorDashboard(summary) {
       ${metric("Abertos", summary.open, "pendentes")}
       ${metric("Resolvidos", summary.resolved, "fechados")}
       ${metric("Recorrentes", summary.recurring, "repetidos")}
-      ${metric("Revisao vencida", summary.overdue, "atrasada")}
+      ${metric("Revisão vencida", summary.overdue, "para revisar")}
     </div>
+    ${errorsDueToday(summary.dueToday)}
     <div class="error-dashboard-grid">
       ${miniList(summary.topics, "Temas mais errados")}
-      ${barPairs(summary.byType, "Erros por tipo")}
-      ${barPairs(summary.bySubject, "Erros por materia")}
-      ${barPairs(summary.bySystem, "Erros por sistema")}
+      ${simpleRank(summary.byType, "Erros por tipo")}
+      ${simpleRank(summary.bySubject, "Erros por matéria")}
+      ${simpleRank(summary.bySystem, "Erros por sistema")}
     </div>`;
+}
+
+function errorsDueToday(items = []) {
+  return `<section class="error-review-today">
+    <div class="section-title compact-title"><h2>Erros para revisar hoje</h2><span>${items.length}</span></div>
+    <div class="record-list">${
+      items
+        .map(
+          (error) => `<article class="error-review-item">
+            <strong>${error.topic}</strong>
+            <p>${error.reviewQuestion}</p>
+            <small>${error.type} - ${error.severity} - ${error.status}</small>
+          </article>`
+        )
+        .join("") || empty("Nenhum erro para revisar hoje.")
+    }</div>
+  </section>`;
 }
 
 function miniList(items, title) {
   return `<div><div class="section-title compact-title"><h2>${title}</h2><span>${items.length}</span></div>
     <div class="record-list">${items.map((item) => `<div class="list-row"><strong>${item.label}</strong><span>${item.value}</span></div>`).join("") || empty("Sem dados.")}</div></div>`;
+}
+
+function simpleRank(map, title) {
+  const entries = Object.entries(map || {}).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  return `<div><div class="section-title compact-title"><h2>${title}</h2><span>${entries.length}</span></div>
+    <div class="record-list">${entries.map(([label, value]) => `<div class="list-row"><strong>${label}</strong><span>${value}</span></div>`).join("") || empty("Sem dados.")}</div></div>`;
 }
 
 function empty(text) {
