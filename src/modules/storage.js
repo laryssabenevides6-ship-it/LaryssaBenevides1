@@ -147,13 +147,14 @@ export function importState(file, scheduleItems = []) {
 
 function migrate(state, scheduleItems = []) {
   const base = freshState(scheduleItems);
-  const schedule = Array.isArray(state.schedule) && state.schedule.length ? state.schedule : base.schedule;
+  const currentSchedule = Array.isArray(state.schedule) && state.schedule.length ? state.schedule.map((item) => normalizeScheduleItem(item)) : [];
+  const schedule = currentSchedule.length && scheduleSignature(currentSchedule) === scheduleSignature(base.schedule) ? currentSchedule : base.schedule;
   return {
     ...base,
     ...state,
     version: 2,
     preferences: { ...base.preferences, ...(state.preferences || {}) },
-    schedule: schedule.map((item) => normalizeScheduleItem(item)),
+    schedule,
     weeklyBoards: state.weeklyBoards || {},
     outsideStudies: (state.outsideStudies || []).map(normalizeOutsideStudy),
     errors: (state.errors || []).map(normalizeError),
@@ -162,6 +163,12 @@ function migrate(state, scheduleItems = []) {
     timers: state.timers || [],
     activeTimer: state.activeTimer || null
   };
+}
+
+function scheduleSignature(schedule = []) {
+  return schedule
+    .map((item) => [item.date, item.week, item.medcofClass, item.stepClass, item.plannedQuestions].join("|"))
+    .join("\n");
 }
 
 function normalizeScheduleItem(item) {
