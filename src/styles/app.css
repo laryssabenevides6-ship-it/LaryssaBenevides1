@@ -1259,7 +1259,7 @@ th {
   }
 
   .plan-task-card {
-    grid-template-columns: 30px minmax(0, 1fr) 36px;
+    grid-template-columns: 30px 36px minmax(0, 1fr);
   }
 }
 
@@ -1417,10 +1417,13 @@ th {
 .plan-task-card {
   position: relative;
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) 42px;
+  grid-template-columns: 34px 42px minmax(0, 1fr);
   gap: 12px;
   align-items: start;
-  padding-right: 13px !important;
+  padding: 14px !important;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
 }
 
 .plan-task-card.done {
@@ -1487,6 +1490,8 @@ th {
 .task-copy strong {
   display: block;
   line-height: 1.35;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .task-copy em {
@@ -1507,7 +1512,7 @@ th {
 }
 
 .study-timer {
-  grid-column: 2 / -1;
+  grid-column: 3 / -1;
   display: grid;
   gap: 9px;
   margin-top: 12px;
