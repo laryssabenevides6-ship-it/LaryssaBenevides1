@@ -178,6 +178,25 @@ export function addError(state, payload) {
   state.errors.push({
     id: uid("error"),
     createdAt: new Date().toISOString(),
+    ...errorPayload(payload)
+  });
+  return state;
+}
+
+export function updateError(state, errorId, payload) {
+  const error = state.errors.find((item) => item.id === errorId);
+  if (!error) return state;
+  Object.assign(error, errorPayload(payload), { updatedAt: new Date().toISOString() });
+  return state;
+}
+
+export function deleteError(state, errorId) {
+  state.errors = state.errors.filter((item) => item.id !== errorId);
+  return state;
+}
+
+function errorPayload(payload) {
+  return {
     date: payload.date || todayISO(),
     source: payload.source || "MEDCOF",
     target: payload.target || "Ambos",
@@ -191,8 +210,7 @@ export function addError(state, payload) {
     severity: payload.severity || "Media",
     reviewDate: payload.reviewDate || addDays(todayISO(), 7),
     status: payload.status || "Aberto"
-  });
-  return state;
+  };
 }
 
 export function updateErrorStatus(state, errorId, status) {

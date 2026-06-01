@@ -4,6 +4,7 @@ import {
   addOutsideStudy,
   addQuestionSession,
   addSimulation,
+  deleteError,
   dayLabel,
   finishStudyTimer,
   getDerived,
@@ -16,6 +17,7 @@ import {
   taskCompletion,
   taskLabel,
   taskStatus,
+  updateError,
   updateErrorStatus
 } from "./engine.js";
 import {
@@ -648,23 +650,25 @@ function renderErrors(d) {
   </section>`;
 }
 
-function errorForm() {
-  return `<div class="section-title"><h2>Novo erro</h2><span>banco de revisao</span></div>
-  <form id="errorForm" class="form">
-    <label class="field"><span>Data</span><input name="date" type="date" value="${todayISO()}" required /></label>
-    ${fieldSelect("source", "Fonte", SOURCE_OPTIONS)}
-    ${fieldSelect("target", "Prova-alvo", TARGET_OPTIONS)}
-    ${fieldSelect("subject", "Materia", SUBJECT_OPTIONS)}
-    ${fieldSelect("system", "Sistema", SYSTEM_OPTIONS)}
-    ${fieldInput("topic", "Tema", "Tema especifico")}
-    <label class="field full-field"><span>Resumo do erro</span><textarea name="summary" placeholder="Resumo do erro" required></textarea></label>
-    <label class="field full-field"><span>Pergunta de revisao</span><textarea name="reviewQuestion" placeholder="Transforme o erro em uma pergunta para revisar depois."></textarea></label>
-    <label class="field full-field"><span>Resposta esperada</span><textarea name="expectedAnswer" placeholder="Qual resposta voce espera acertar na revisao?"></textarea></label>
-    ${fieldSelect("type", "Tipo de erro", ERROR_TYPE_OPTIONS)}
-    ${fieldSelect("severity", "Gravidade", SEVERITY_OPTIONS)}
-    <label class="field"><span>Data de revisao</span><input name="reviewDate" type="date" /></label>
-    ${fieldSelect("status", "Status", ERROR_STATUS_OPTIONS)}
-    <button class="primary-button" type="submit">Salvar erro</button>
+function errorForm(error = null, formId = "errorForm") {
+  const isEdit = Boolean(error);
+  return `<div class="section-title"><h2>${isEdit ? "Editar erro" : "Novo erro"}</h2><span>banco de revisao</span></div>
+  <form id="${formId}" class="form">
+    ${isEdit ? `<input type="hidden" name="id" value="${error.id}" />` : ""}
+    <label class="field"><span>Data</span><input name="date" type="date" value="${error?.date || todayISO()}" required /></label>
+    ${fieldSelect("source", "Fonte", SOURCE_OPTIONS, true, error?.source)}
+    ${fieldSelect("target", "Prova-alvo", TARGET_OPTIONS, true, error?.target)}
+    ${fieldSelect("subject", "Materia", SUBJECT_OPTIONS, true, error?.subject)}
+    ${fieldSelect("system", "Sistema", SYSTEM_OPTIONS, true, error?.system)}
+    ${fieldInput("topic", "Tema", "Tema especifico", "text", false, "", error?.topic)}
+    <label class="field full-field"><span>Resumo do erro</span><textarea name="summary" placeholder="Resumo do erro" required>${escapeHtml(error?.summary || "")}</textarea></label>
+    <label class="field full-field"><span>Pergunta de revisao</span><textarea name="reviewQuestion" placeholder="Transforme o erro em uma pergunta para revisar depois.">${escapeHtml(error?.reviewQuestion || "")}</textarea></label>
+    <label class="field full-field"><span>Resposta esperada</span><textarea name="expectedAnswer" placeholder="Qual resposta voce espera acertar na revisao?">${escapeHtml(error?.expectedAnswer || "")}</textarea></label>
+    ${fieldSelect("type", "Tipo de erro", ERROR_TYPE_OPTIONS, true, error?.type)}
+    ${fieldSelect("severity", "Gravidade", SEVERITY_OPTIONS, true, error?.severity)}
+    <label class="field"><span>Data de revisao</span><input name="reviewDate" type="date" value="${error?.reviewDate || ""}" /></label>
+    ${fieldSelect("status", "Status", ERROR_STATUS_OPTIONS, true, error?.status)}
+    <button class="primary-button" type="submit">${isEdit ? "Salvar alteracoes" : "Salvar erro"}</button>
   </form>`;
 }
 
@@ -802,6 +806,14 @@ function handleAction(event) {
   const modalDayId = event.currentTarget.closest("#modalContent") ? event.currentTarget.dataset.dayId || state.activeTimer?.dayId : "";
   if (action === "goto-questions") currentView = "questions";
   if (action === "goto-errors") currentView = "errors";
+  if (action === "edit-error") {
+    openErrorModal(event.currentTarget.dataset.errorId);
+    return;
+  }
+  if (action === "delete-error") {
+    if (!confirm("Apagar este erro do caderno?")) return;
+    state = deleteError(state, event.currentTarget.dataset.errorId);
+  }
   if (action === "start-timer") state = startStudyTimer(state, event.currentTarget.dataset.dayId, event.currentTarget.dataset.taskKey);
   if (action === "pause-timer") state = pauseStudyTimer(state);
   if (action === "resume-timer") state = resumeStudyTimer(state);
@@ -822,6 +834,14 @@ function handleAction(event) {
   renderNav();
   persistRender();
   if ($("#modal")?.open && modalDayId) openDayModal(modalDayId);
+}
+
+function openErrorModal(errorId) {
+  const error = state.errors.find((item) => item.id === errorId);
+  if (!error) return;
+  $("#modalContent").innerHTML = `<div class="modal-day">${errorForm(error, "errorEditForm")}</div>`;
+  if (!$("#modal").open) $("#modal").showModal();
+  $("#errorEditForm").addEventListener("submit", handleErrorSubmit);
 }
 
 function handleQuestionsSubmit(event) {
@@ -875,8 +895,10 @@ function handleOutsideStudySubmit(event) {
 
 function handleErrorSubmit(event) {
   event.preventDefault();
-  state = addError(state, Object.fromEntries(new FormData(event.currentTarget)));
+  const data = Object.fromEntries(new FormData(event.currentTarget));
+  state = data.id ? updateError(state, data.id, data) : addError(state, data);
   event.currentTarget.reset();
+  if (event.currentTarget.id === "errorEditForm") $("#modal").close();
   persistRender();
 }
 
@@ -923,7 +945,11 @@ function errorCard(error) {
     ${error.reviewQuestion ? `<small>Pergunta: ${error.reviewQuestion}</small>` : ""}
     ${error.expectedAnswer ? `<small>Resposta esperada: ${error.expectedAnswer}</small>` : ""}
     <small>${error.type} - ${error.subject} - ${error.system}</small>
-    <select data-error-status="${error.id}">${ERROR_STATUS_OPTIONS.map((status) => `<option ${status === error.status ? "selected" : ""}>${status}</option>`).join("")}</select>
+    <div class="error-card-actions">
+      <select data-error-status="${error.id}">${ERROR_STATUS_OPTIONS.map((status) => `<option ${status === error.status ? "selected" : ""}>${status}</option>`).join("")}</select>
+      <button class="secondary-button mini-button" data-action="edit-error" data-error-id="${error.id}" type="button">Editar</button>
+      <button class="danger-button mini-button" data-action="delete-error" data-error-id="${error.id}" type="button">Apagar</button>
+    </div>
   </article>`;
 }
 
@@ -993,12 +1019,12 @@ function simulationForm() {
     </details>`;
 }
 
-function fieldInput(name, label, placeholder = "", type = "text", required = false, extra = "") {
-  return `<label class="field"><span>${label}</span><input name="${name}" type="${type}" placeholder="${placeholder}" ${required ? "required" : ""} ${extra} /></label>`;
+function fieldInput(name, label, placeholder = "", type = "text", required = false, extra = "", value = "") {
+  return `<label class="field"><span>${label}</span><input name="${name}" type="${type}" placeholder="${placeholder}" value="${escapeHtml(value || "")}" ${required ? "required" : ""} ${extra} /></label>`;
 }
 
-function fieldSelect(name, label, options, required = true) {
-  return `<label class="field"><span>${label}</span><select name="${name}" ${required ? "required" : ""}><option value="">Escolha</option>${options.map((option) => `<option>${option}</option>`).join("")}</select></label>`;
+function fieldSelect(name, label, options, required = true, value = "") {
+  return `<label class="field"><span>${label}</span><select name="${name}" ${required ? "required" : ""}><option value="">Escolha</option>${options.map((option) => `<option ${option === value ? "selected" : ""}>${option}</option>`).join("")}</select></label>`;
 }
 
 function simulationCompare() {

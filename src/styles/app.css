@@ -2012,6 +2012,22 @@ th {
   margin: 0;
 }
 
+.error-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.error-card-actions select {
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--surface-2);
+  color: var(--text);
+}
+
 @media (max-width: 920px) {
   .plan-grid,
   .task-checklist,
