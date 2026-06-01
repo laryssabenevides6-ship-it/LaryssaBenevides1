@@ -171,14 +171,12 @@ function normalizeScheduleItem(item) {
     questions: false,
     anki: false,
     errors: false,
-    interleaving: false,
     ...(item.tasks || {})
   };
   return {
     ...item,
     tasks,
-    status: item.status || "Nao iniciado",
-    rescheduledTo: item.rescheduledTo || "",
+    status: item.status || "Pendente",
     completedAt: item.completedAt || "",
     movedToBacklog: Boolean(item.movedToBacklog)
   };
@@ -199,22 +197,37 @@ function normalizeOutsideStudy(study) {
 }
 
 function normalizeError(error) {
+  const errorTypes = [
+    "Falta de conteudo",
+    "Conduta/protocolo",
+    "Confusao conceitual",
+    "Fisiopatologia/mecanismo",
+    "Interpretacao do enunciado",
+    "Desatencao/leitura rapida",
+    "Tempo/pressa",
+    "Chute/incerteza"
+  ];
   return {
     id: error.id || `error-${Date.now().toString(36)}`,
     date: error.date || todayISO(),
     source: error.source || "MEDCOF",
+    target: error.target || "Ambos",
     subject: error.subject || "Nao classificado",
     system: error.system || "Nao classificado",
-    topic: error.topic || "",
-    summary: error.summary || error.question || "",
-    type: error.type || "Conceito",
-    probableReason: error.probableReason || error.whyMissed || "",
+    topic: cleanText(error.topic),
+    summary: cleanText(error.summary || error.question),
+    reviewQuestion: cleanText(error.reviewQuestion || error.question),
+    expectedAnswer: cleanText(error.expectedAnswer),
+    type: errorTypes.includes(error.type) ? error.type : "Falta de conteudo",
     severity: error.severity || "Media",
-    nextAction: error.nextAction || "Revisar explicacao",
     reviewDate: error.reviewDate || "",
     status: ["Aberto", "Revisado", "Resolvido", "Recorrente"].includes(error.status) ? error.status : "Aberto",
     createdAt: error.createdAt || new Date().toISOString()
   };
+}
+
+function cleanText(value = "") {
+  return String(value || "").trim().replace(/\s+/g, " ");
 }
 
 function normalizeEmail(email = "") {

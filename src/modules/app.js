@@ -8,7 +8,6 @@ import {
   finishStudyTimer,
   getDerived,
   pauseStudyTimer,
-  rescheduleDay,
   resumeStudyTimer,
   runAutomations,
   saveWeeklyBoard,
@@ -42,6 +41,46 @@ const views = [
   ["dashboard", "Dashboard", "D"],
   ["settings", "Conta e Backup", "*"]
 ];
+
+const SOURCE_OPTIONS = ["MEDCOF", "UWorld", "Prova antiga", "Outro"];
+const TARGET_OPTIONS = ["Residencia BR", "Step 1", "Ambos"];
+const SUBJECT_OPTIONS = ["Clinica Medica", "Cirurgia Geral", "Pediatria", "Ginecologia e Obstetricia", "Preventiva/MFC", "Step 1", "Outro"];
+const SYSTEM_OPTIONS = [
+  "Cardiovascular",
+  "Respiratorio",
+  "Renal",
+  "Gastrointestinal",
+  "Endocrino",
+  "Reprodutivo",
+  "Neurologia",
+  "Hematologia/Oncologia",
+  "Infectologia/Microbiologia",
+  "Imunologia",
+  "Farmacologia",
+  "Bioquimica/Metabolismo",
+  "Genetica",
+  "Bioestatistica/Epidemiologia",
+  "Etica/Behavioral Science",
+  "Musculoesqueletico/Reumatologia",
+  "Obstetricia",
+  "Ginecologia",
+  "Neonatologia",
+  "Urgencia/Emergencia",
+  "APS/MFC",
+  "Outro"
+];
+const ERROR_TYPE_OPTIONS = [
+  "Falta de conteudo",
+  "Conduta/protocolo",
+  "Confusao conceitual",
+  "Fisiopatologia/mecanismo",
+  "Interpretacao do enunciado",
+  "Desatencao/leitura rapida",
+  "Tempo/pressa",
+  "Chute/incerteza"
+];
+const SEVERITY_OPTIONS = ["Baixa", "Media", "Alta", "Critica"];
+const ERROR_STATUS_OPTIONS = ["Aberto", "Revisado", "Resolvido", "Recorrente"];
 
 let seed = [];
 let state;
@@ -234,7 +273,6 @@ function todayPlan(day, now) {
     <div class="plan-grid">
       ${planTaskCard(day, "medcof", "Aula MEDCOF do dia", day.medcofClass || "Sem aula MEDCOF")}
       ${planTaskCard(day, "step", "Aula B&B / Step 1 do dia", day.stepClass || "Sem aula B&B")}
-      ${planTaskCard(day, "interleaving", "Bloco secundario/interleaving", day.secondaryBlock || day.dailyFocus || "Interleaving livre")}
       ${planTaskCard(day, "questions", "Questoes planejadas", day.plannedQuestions || "25 questoes")}
       ${planTaskCard(day, "anki", "Anki obrigatorio", `Anki: ${day.tasks.anki ? "Feito" : "Pendente"}`)}
       ${planTaskCard(day, "errors", "Revisao/caderno de erros", day.errorReview || "Revisar erros abertos")}
@@ -259,7 +297,7 @@ function planTaskCard(day, key, label, value) {
 }
 
 function studyTimerControls(day, key) {
-  if (!["medcof", "step", "interleaving"].includes(key)) return "";
+  if (!["medcof", "step"].includes(key)) return "";
   const active = state.activeTimer;
   const isThisTimer = active?.dayId === day.id && active?.taskKey === key;
   if (isThisTimer) {
@@ -337,8 +375,8 @@ function renderSchedule(d) {
         <div class="section-title"><h2>${weekRangeTitle(selectedScheduleWeek, weekItems)}</h2><span>${weekItems.length} dia(s)</span></div>
         <div class="table-wrap">
           <table class="schedule-table">
-            <thead><tr>${["Data", "Aula MEDCOF", "Aula B&B", "Questoes", "Anki", "Revisao de erros", "Interleaving", "Status MEDCOF", "Status B&B", "Status Questoes", "Status Anki", "Status Revisao", "Status Interleaving", "Status geral", "Detalhes"].map((h) => `<th>${h}</th>`).join("")}</tr></thead>
-            <tbody>${weekItems.map(scheduleRow).join("") || `<tr><td colspan="15">${empty("Nenhum dia nesta semana.")}</td></tr>`}</tbody>
+            <thead><tr>${["Data", "Aula MEDCOF", "Aula B&B", "Questoes", "Anki", "Revisao de erros", "Status MEDCOF", "Status B&B", "Status Questoes", "Status Anki", "Status Revisao", "Status geral", "Detalhes"].map((h) => `<th>${h}</th>`).join("")}</tr></thead>
+            <tbody>${weekItems.map(scheduleRow).join("") || `<tr><td colspan="13">${empty("Nenhum dia nesta semana.")}</td></tr>`}</tbody>
           </table>
         </div>
       </section>
@@ -354,8 +392,7 @@ function scheduleRow(day) {
     <td>${day.plannedQuestions || "25 questoes"}</td>
     <td>Anki: ${taskStatus(day, "anki")}</td>
     <td>${day.errorReview || "Revisar erros"}</td>
-    <td>${day.secondaryBlock || day.dailyFocus || "-"}</td>
-    ${["medcof", "step", "questions", "anki", "errors", "interleaving"].map((key) => `<td>${taskStatus(day, key)}</td>`).join("")}
+    ${["medcof", "step", "questions", "anki", "errors"].map((key) => `<td>${taskStatus(day, key)}</td>`).join("")}
     <td><span class="status-pill ${statusClass(day.status)}">${day.status}</span></td>
     <td><button class="secondary-button details-button" data-open-day="${day.id}">Detalhes de hoje</button></td>
   </tr>`;
@@ -377,7 +414,7 @@ function weekButton(week, items, index) {
   return `<button class="${week === selectedScheduleWeek ? "active" : ""}" data-week-select="${week}">
     <strong>Semana ${index + 1}</strong>
     <span>${fmtDate(items[0]?.date)} a ${fmtDate(items.at(-1)?.date)}</span>
-    <small>${items.filter((item) => item.status === "Concluido").length}/${items.length} concluido(s)</small>
+    <small>${items.filter((item) => item.status === "Feito").length}/${items.length} feito(s)</small>
   </button>`;
 }
 
@@ -434,7 +471,7 @@ function renderQuestions(d) {
       </div>
       <div class="quick-result">
         <div><span>Acerto do bloco</span><strong id="qAccuracyPreview">-</strong></div>
-        <div><span>Tempo medio</span><strong id="qAvgPreview">-</strong></div>
+        <div><span>Tempo por questao</span><strong id="qAvgPreview">-</strong></div>
       </div>
     </section>
     <section class="panel questions-main simple-question-panel">${questionsForm()}</section>
@@ -452,12 +489,12 @@ function questionsForm() {
   return `<div class="section-title"><h2>Registrar questoes feitas</h2><span>simples e rapido</span></div>
   <form id="questionsForm" class="quick-question-form">
     <div class="quick-row two">
-      ${fieldSelect("source", "Fonte", ["MEDCOF", "UWorld", "Prova antiga", "Outro"])}
-      ${fieldSelect("target", "Prova", ["Residencia BR", "Step 1", "Ambos"])}
+      ${fieldSelect("source", "Fonte", SOURCE_OPTIONS)}
+      ${fieldSelect("target", "Prova-alvo", TARGET_OPTIONS)}
     </div>
     <div class="quick-row">
-      ${fieldInput("subject", "Materia", "Ex.: Cardiologia", "text", true)}
-      ${fieldInput("system", "Sistema", "Ex.: Cardiovascular", "text", true)}
+      ${fieldSelect("subject", "Materia", SUBJECT_OPTIONS)}
+      ${fieldSelect("system", "Sistema", SYSTEM_OPTIONS)}
       ${fieldInput("topic", "Tema", "Opcional")}
     </div>
     <div class="quick-row result-row">
@@ -465,16 +502,18 @@ function questionsForm() {
       ${fieldInput("correct", "Acertos", "15", "number", true, 'min="0"')}
       ${fieldInput("minutes", "Minutos", "40", "number", true, 'min="0"')}
       ${fieldInput("accuracy", "Percentual", "Auto", "text", false, "readonly")}
-      ${fieldInput("avgTime", "Tempo/q", "Auto", "text", false, "readonly")}
+      ${fieldInput("avgTime", "Tempo por questao", "Auto", "text", false, "readonly")}
     </div>
     <details class="inline-error-box">
-      <summary>Registrar erro importante deste bloco</summary>
+      <summary>Adicionar erro ao caderno de erros</summary>
       <div class="quick-row">
         ${fieldInput("errorTopic", "Tema do erro", "Ex.: choque distributivo")}
-        ${fieldSelect("errorType", "Tipo", ["Conceito", "Interpretacao", "Memorizacao", "Atencao", "Tempo"])}
-        ${fieldSelect("errorSeverity", "Gravidade", ["Baixa", "Media", "Alta", "Critica"])}
+        ${fieldSelect("errorType", "Tipo", ERROR_TYPE_OPTIONS, false)}
+        ${fieldSelect("errorSeverity", "Gravidade", SEVERITY_OPTIONS, false)}
       </div>
-      <label class="field full-field"><span>Resumo do erro</span><textarea name="errorSummary" placeholder="O que voce errou e qual sera a proxima acao?"></textarea></label>
+      <label class="field full-field"><span>Resumo do erro</span><textarea name="errorSummary" placeholder="O que voce errou neste bloco?"></textarea></label>
+      <label class="field full-field"><span>Pergunta de revisao</span><textarea name="errorReviewQuestion" placeholder="Pergunta para revisar esse erro depois."></textarea></label>
+      <label class="field full-field"><span>Resposta esperada</span><textarea name="errorExpectedAnswer" placeholder="Resposta que voce espera lembrar."></textarea></label>
     </details>
     <label class="field full-field"><span>Observacoes do bloco</span><textarea name="notes" placeholder="Opcional: dificuldade geral, fonte, comentarios..."></textarea></label>
     <button class="primary-button submit-main" type="submit">Salvar bloco de questoes</button>
@@ -500,25 +539,26 @@ function renderErrors(d) {
 function errorForm() {
   return `<div class="section-title"><h2>Novo erro</h2><span>banco de revisao</span></div>
   <form id="errorForm" class="form">
-    <input name="date" type="date" value="${todayISO()}" required />
-    ${select("source", ["MEDCOF", "UWorld", "Prova antiga", "Outro"], "Fonte")}
-    <input name="subject" placeholder="Materia" required />
-    <input name="system" placeholder="Sistema" required />
-    <input name="topic" placeholder="Tema" />
-    <textarea name="summary" placeholder="Resumo do erro" required></textarea>
-    ${select("type", ["Conceito", "Interpretacao", "Memorizacao", "Atencao", "Tempo"], "Tipo de erro")}
-    <input name="probableReason" placeholder="Motivo provavel" />
-    ${select("severity", ["Baixa", "Media", "Alta", "Critica"], "Gravidade")}
-    <input name="nextAction" placeholder="Proxima acao" />
-    <input name="reviewDate" type="date" />
-    ${select("status", ["Aberto", "Revisado", "Resolvido", "Recorrente"], "Status")}
+    <label class="field"><span>Data</span><input name="date" type="date" value="${todayISO()}" required /></label>
+    ${fieldSelect("source", "Fonte", SOURCE_OPTIONS)}
+    ${fieldSelect("target", "Prova-alvo", TARGET_OPTIONS)}
+    ${fieldSelect("subject", "Materia", SUBJECT_OPTIONS)}
+    ${fieldSelect("system", "Sistema", SYSTEM_OPTIONS)}
+    ${fieldInput("topic", "Tema", "Tema especifico")}
+    <label class="field full-field"><span>Resumo do erro</span><textarea name="summary" placeholder="Resumo do erro" required></textarea></label>
+    <label class="field full-field"><span>Pergunta de revisao</span><textarea name="reviewQuestion" placeholder="Transforme o erro em uma pergunta para revisar depois."></textarea></label>
+    <label class="field full-field"><span>Resposta esperada</span><textarea name="expectedAnswer" placeholder="Qual resposta voce espera acertar na revisao?"></textarea></label>
+    ${fieldSelect("type", "Tipo de erro", ERROR_TYPE_OPTIONS)}
+    ${fieldSelect("severity", "Gravidade", SEVERITY_OPTIONS)}
+    <label class="field"><span>Data de revisao</span><input name="reviewDate" type="date" /></label>
+    ${fieldSelect("status", "Status", ERROR_STATUS_OPTIONS)}
     <button class="primary-button" type="submit">Salvar erro</button>
   </form>`;
 }
 
 function renderDashboard(d) {
   return `<div class="grid metrics">
-      ${metric("Progresso", `${d.progress}%`, "dias concluidos")}
+      ${metric("Progresso", `${d.progress}%`, "dias feitos")}
       ${metric("Questoes", d.totalQuestions, "total")}
       ${metric("Acertos", `${d.accuracy}%`, "geral")}
       ${metric("Horas totais", `${d.hours}h`, `${d.studyTimerHours}h pelo cronometro`)}
@@ -529,6 +569,7 @@ function renderDashboard(d) {
       <section class="panel">${barList(d.systemPerformance, "Desempenho por sistema")}</section>
       <section class="panel">${barPairs(d.questionsBySource, "Questoes por fonte")}</section>
       <section class="panel">${barPairs(d.statusCounts, "Status do cronograma")}</section>
+      <section class="panel">${errorDashboard(d.errorSummary)}</section>
       <section class="panel">${simulationCompare()}</section>
     </div>`;
 }
@@ -612,15 +653,13 @@ function openDayModal(dayId) {
       ${dailyDetailCard(day, "questions", "Questoes", day.plannedQuestions || "25 questoes planejadas")}
       ${dailyDetailCard(day, "anki", "Anki", `Anki: ${day.tasks?.anki ? "Feito" : "Pendente"}`)}
       ${dailyDetailCard(day, "errors", "Revisao de erros", day.errorReview || "Revisar erros abertos")}
-      ${dailyDetailCard(day, "interleaving", "Interleaving", day.secondaryBlock || day.dailyFocus || "Interleaving livre")}
     </div>
     <section class="modal-study-section">
       <div class="section-title"><h2>Cronometro de estudo</h2><span>vinculado a aula</span></div>
       <div class="modal-study-timers">
-        ${["medcof", "step", "interleaving"].map((key) => `<article><strong>${taskLabel(key)}</strong>${studyTimerControls(day, key)}</article>`).join("")}
+        ${["medcof", "step"].map((key) => `<article><strong>${taskLabel(key)}</strong>${studyTimerControls(day, key)}</article>`).join("")}
       </div>
     </section>
-    <form id="rescheduleForm" class="form compact modal-reschedule"><input name="date" type="date" required /><button class="secondary-button">Reprogramar dia</button></form>
   </div>`;
   if (!$("#modal").open) $("#modal").showModal();
   $("#modalContent").querySelectorAll("[data-task]").forEach((input) =>
@@ -631,12 +670,6 @@ function openDayModal(dayId) {
       render();
     })
   );
-  $("#rescheduleForm").addEventListener("submit", (event) => {
-    event.preventDefault();
-    state = rescheduleDay(state, dayId, new FormData(event.currentTarget).get("date"));
-    $("#modal").close();
-    persistRender();
-  });
   $("#modalContent").querySelectorAll("[data-action]").forEach((button) => button.addEventListener("click", handleAction));
 }
 
@@ -648,7 +681,7 @@ function dailyDetailCard(day, key, title, content) {
       <span>${title}</span>
     </label>
     <p>${content}</p>
-    <strong class="status-pill ${done ? "concluido" : "pendente"}">${done ? "Feito" : "Pendente"}</strong>
+    <strong class="status-pill ${done ? "feito" : "pendente"}">${done ? "Feito" : "Pendente"}</strong>
   </article>`;
 }
 
@@ -692,14 +725,15 @@ function handleQuestionsSubmit(event) {
     state = addError(state, {
       date: todayISO(),
       source: data.source,
+      target: data.target,
       subject: data.subject,
       system: data.system,
-      topic: data.errorTopic || data.topic,
+      topic: (data.errorTopic || data.topic || "").trim(),
       summary: data.errorSummary,
-      type: data.errorType || "Conceito",
-      probableReason: "",
+      reviewQuestion: data.errorReviewQuestion,
+      expectedAnswer: data.errorExpectedAnswer,
+      type: data.errorType || "Falta de conteudo",
       severity: data.errorSeverity || "Media",
-      nextAction: "Revisar este erro",
       status: "Aberto"
     });
   }
@@ -769,10 +803,12 @@ function checkbox(day, key, label) {
 
 function errorCard(error) {
   return `<article class="task-card">
-    <div><strong>${error.topic || error.subject}</strong><span>${fmtDate(error.date)} · ${error.source} · ${error.severity}</span></div>
+    <div><strong>${error.topic || error.subject}</strong><span>${fmtDate(error.date)} - ${error.source} - ${error.target || "Ambos"} - ${error.severity}</span></div>
     <p>${error.summary}</p>
-    <small>${error.type} · ${error.probableReason || "motivo nao informado"} · Proxima acao: ${error.nextAction}</small>
-    <select data-error-status="${error.id}">${["Aberto", "Revisado", "Resolvido", "Recorrente"].map((status) => `<option ${status === error.status ? "selected" : ""}>${status}</option>`).join("")}</select>
+    ${error.reviewQuestion ? `<small>Pergunta: ${error.reviewQuestion}</small>` : ""}
+    ${error.expectedAnswer ? `<small>Resposta esperada: ${error.expectedAnswer}</small>` : ""}
+    <small>${error.type} - ${error.subject} - ${error.system}</small>
+    <select data-error-status="${error.id}">${ERROR_STATUS_OPTIONS.map((status) => `<option ${status === error.status ? "selected" : ""}>${status}</option>`).join("")}</select>
   </article>`;
 }
 
@@ -846,8 +882,8 @@ function fieldInput(name, label, placeholder = "", type = "text", required = fal
   return `<label class="field"><span>${label}</span><input name="${name}" type="${type}" placeholder="${placeholder}" ${required ? "required" : ""} ${extra} /></label>`;
 }
 
-function fieldSelect(name, label, options) {
-  return `<label class="field"><span>${label}</span><select name="${name}" required><option value="">Escolha</option>${options.map((option) => `<option>${option}</option>`).join("")}</select></label>`;
+function fieldSelect(name, label, options, required = true) {
+  return `<label class="field"><span>${label}</span><select name="${name}" ${required ? "required" : ""}><option value="">Escolha</option>${options.map((option) => `<option>${option}</option>`).join("")}</select></label>`;
 }
 
 function simulationCompare() {
@@ -881,12 +917,41 @@ function barPairs(map, title) {
     <div class="bar-list">${entries.map(([label, value]) => `<div class="bar-row"><span>${label}</span><div><i style="width:${Math.round((value / max) * 100)}%"></i></div><b>${value}</b></div>`).join("") || empty("Sem dados.")}</div>`;
 }
 
+function errorDashboard(summary) {
+  return `<div class="section-title"><h2>Caderno de Erros</h2><span>${summary.total} erro(s)</span></div>
+    <div class="grid metrics error-metrics">
+      ${metric("Total", summary.total, "erros registrados")}
+      ${metric("Abertos", summary.open, "pendentes")}
+      ${metric("Resolvidos", summary.resolved, "fechados")}
+      ${metric("Recorrentes", summary.recurring, "repetidos")}
+      ${metric("Revisao vencida", summary.overdue, "atrasada")}
+    </div>
+    <div class="error-dashboard-grid">
+      ${miniList(summary.topics, "Temas mais errados")}
+      ${barPairs(summary.byType, "Erros por tipo")}
+      ${barPairs(summary.bySubject, "Erros por materia")}
+      ${barPairs(summary.bySystem, "Erros por sistema")}
+    </div>`;
+}
+
+function miniList(items, title) {
+  return `<div><div class="section-title compact-title"><h2>${title}</h2><span>${items.length}</span></div>
+    <div class="record-list">${items.map((item) => `<div class="list-row"><strong>${item.label}</strong><span>${item.value}</span></div>`).join("") || empty("Sem dados.")}</div></div>`;
+}
+
 function empty(text) {
   return `<p class="empty">${text}</p>`;
 }
 
 function statusClass(status = "") {
-  return status.toLowerCase().replace(/\s/g, "-").replace(/[ãáà]/g, "a").replace(/[í]/g, "i").replace(/[ó]/g, "o");
+  const map = {
+    Pendente: "pendente",
+    Parcial: "parcial",
+    Feito: "feito",
+    Atrasado: "atrasado",
+    Livre: "livre"
+  };
+  return map[status] || "pendente";
 }
 
 function searchTerm() {

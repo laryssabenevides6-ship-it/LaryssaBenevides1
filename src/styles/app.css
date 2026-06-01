@@ -1172,10 +1172,6 @@ th {
   gap: 0;
 }
 
-.modal-reschedule {
-  margin-top: 2px;
-}
-
 @media (max-width: 1120px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -1192,6 +1188,7 @@ th {
 
   .alerts,
   .metrics,
+  .error-metrics,
   .compact-metrics,
   .today-layout,
   .dashboard-grid,
@@ -1510,7 +1507,7 @@ th {
   font-weight: 900;
 }
 
-.status-pill.concluido {
+.status-pill.feito {
   background: color-mix(in srgb, var(--brand) 25%, var(--surface));
   color: var(--brand);
 }
@@ -1521,9 +1518,36 @@ th {
 }
 
 .status-pill.parcial,
-.status-pill.reprogramado {
+.status-pill.pendente {
   background: color-mix(in srgb, var(--warning) 20%, var(--surface));
   color: var(--warning);
+}
+
+.status-pill.livre {
+  background: color-mix(in srgb, var(--info) 18%, var(--surface));
+  color: var(--info);
+}
+
+.error-metrics {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-bottom: 18px;
+}
+
+.error-metrics .metric {
+  box-shadow: none;
+}
+
+.error-metrics .metric strong {
+  font-size: 24px;
+}
+
+.error-dashboard-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.compact-title {
+  margin-bottom: 8px;
 }
 
 .inline-alerts {

@@ -5,17 +5,16 @@ export const TASKS = [
   ["step", "Aula B&B / Step 1"],
   ["questions", "Questoes"],
   ["anki", "Anki"],
-  ["errors", "Revisao de erros"],
-  ["interleaving", "Interleaving"]
+  ["errors", "Revisao de erros"]
 ];
 
-export const REQUIRED_TASKS = ["medcof", "step", "questions", "anki", "errors", "interleaving"];
+export const REQUIRED_TASKS = ["medcof", "step", "questions", "anki", "errors"];
 
 export function runAutomations(state, now = todayISO()) {
   state.schedule.forEach((day) => {
-    day.tasks = { medcof: false, step: false, questions: false, anki: false, errors: false, interleaving: false, ...(day.tasks || {}) };
-    day.status = day.rescheduledTo ? "Reprogramado" : dayStatus(day, now);
-    day.movedToBacklog = day.date < now && day.status !== "Concluido" && day.status !== "Reprogramado";
+    day.tasks = { medcof: false, step: false, questions: false, anki: false, errors: false, ...(day.tasks || {}) };
+    day.status = dayStatus(day, now);
+    day.movedToBacklog = day.date < now && !["Feito", "Livre"].includes(day.status);
   });
   return state;
 }
@@ -25,13 +24,13 @@ export function setTask(state, dayId, taskKey, done, now = todayISO()) {
   if (!day || !TASKS.some(([key]) => key === taskKey)) return state;
   day.tasks[taskKey] = Boolean(done);
   day.status = dayStatus(day, now);
-  day.completedAt = day.status === "Concluido" ? new Date().toISOString() : "";
+  day.completedAt = day.status === "Feito" ? new Date().toISOString() : "";
   return runAutomations(state, now);
 }
 
 export function startStudyTimer(state, dayId, taskKey, nowDate = new Date()) {
   const day = state.schedule.find((item) => item.id === dayId);
-  if (!day || !["medcof", "step", "interleaving"].includes(taskKey)) return state;
+  if (!day || !["medcof", "step"].includes(taskKey)) return state;
   if (state.activeTimer) return state;
   state.activeTimer = {
     id: uid("timer"),
@@ -85,15 +84,6 @@ export function finishStudyTimer(state, nowDate = new Date()) {
   return state;
 }
 
-export function rescheduleDay(state, dayId, dateISO, now = todayISO()) {
-  const day = state.schedule.find((item) => item.id === dayId);
-  if (!day || !dateISO) return state;
-  day.rescheduledTo = dateISO;
-  day.status = "Reprogramado";
-  day.movedToBacklog = false;
-  return runAutomations(state, now);
-}
-
 export function saveWeeklyBoard(state, week, content) {
   if (!week) return state;
   state.weeklyBoards[week] = {
@@ -117,9 +107,9 @@ export function addQuestionSession(state, payload) {
     selection: payload.selection || "Por assunto",
     format: payload.format || "Bloco comum",
     target: payload.target || "Ambos",
-    subject: payload.subject || "Nao classificado",
-    system: payload.system || "Nao classificado",
-    topic: payload.topic || "",
+    subject: cleanText(payload.subject) || "Nao classificado",
+    system: cleanText(payload.system) || "Nao classificado",
+    topic: cleanText(payload.topic),
     questions,
     correct,
     accuracy,
@@ -190,14 +180,15 @@ export function addError(state, payload) {
     createdAt: new Date().toISOString(),
     date: payload.date || todayISO(),
     source: payload.source || "MEDCOF",
-    subject: payload.subject || "Nao classificado",
-    system: payload.system || "Nao classificado",
-    topic: payload.topic || "",
-    summary: payload.summary || "",
-    type: payload.type || "Conceito",
-    probableReason: payload.probableReason || "",
+    target: payload.target || "Ambos",
+    subject: cleanText(payload.subject) || "Nao classificado",
+    system: cleanText(payload.system) || "Nao classificado",
+    topic: cleanText(payload.topic),
+    summary: cleanText(payload.summary),
+    reviewQuestion: cleanText(payload.reviewQuestion),
+    expectedAnswer: cleanText(payload.expectedAnswer),
+    type: normalizeErrorType(payload.type),
     severity: payload.severity || "Media",
-    nextAction: payload.nextAction || "Revisar explicacao",
     reviewDate: payload.reviewDate || addDays(todayISO(), 7),
     status: payload.status || "Aberto"
   });
@@ -216,7 +207,7 @@ export function getDerived(state, now = todayISO()) {
   const today = schedule.find((item) => item.date === now) || schedule.find((item) => item.date > now) || schedule[0];
   const week = today?.week || getWeekKey(now);
   const weekDays = schedule.filter((item) => item.week === week);
-  const completedDays = schedule.filter((item) => item.status === "Concluido");
+  const completedDays = schedule.filter((item) => item.status === "Feito");
   const totalQuestions = state.sessions.reduce((sum, item) => sum + item.questions, 0);
   const totalCorrect = state.sessions.reduce((sum, item) => sum + item.correct, 0);
   const outsideStudies = state.outsideStudies || [];
@@ -254,7 +245,8 @@ export function getDerived(state, now = todayISO()) {
     systemPerformance: summarizeAccuracy(state.sessions, "system"),
     questionsBySource: groupCount(state.sessions, (item) => item.source),
     statusCounts: groupCount(schedule, (item) => item.status),
-    weekProgress: weekDays.map((day) => ({ label: dayLabel(day), value: taskCompletion(day) }))
+    weekProgress: weekDays.map((day) => ({ label: dayLabel(day), value: taskCompletion(day) })),
+    errorSummary: summarizeErrors(state.errors, now)
   };
 }
 
@@ -262,7 +254,6 @@ function timerTitle(day, taskKey) {
   if (!day) return "Estudo do cronograma";
   if (taskKey === "medcof") return day.medcofClass || "Aula MEDCOF";
   if (taskKey === "step") return day.stepClass || "Aula B&B / Step 1";
-  if (taskKey === "interleaving") return day.secondaryBlock || day.dailyFocus || "Interleaving";
   return "Estudo do cronograma";
 }
 
@@ -279,12 +270,12 @@ export function taskStatus(day, key) {
 }
 
 export function dayStatus(day, now = todayISO()) {
+  if (isFreeDay(day)) return "Livre";
   const done = REQUIRED_TASKS.filter((key) => day.tasks?.[key]).length;
-  if (day.rescheduledTo) return "Reprogramado";
-  if (done === REQUIRED_TASKS.length) return "Concluido";
+  if (done === REQUIRED_TASKS.length) return "Feito";
   if (day.date < now) return "Atrasado";
   if (done > 0) return "Parcial";
-  return "Nao iniciado";
+  return "Pendente";
 }
 
 export function dayLabel(day) {
@@ -304,11 +295,52 @@ function buildAlerts(state, now, overdueDays, openErrors, weekQuestions) {
   if (stepLate) alerts.push({ tone: "warning", text: `B&B essencial atrasado: ${stepLate.stepClass}` });
   if (greenLate) alerts.push({ tone: "warning", text: `Alta prioridade atrasada: ${greenLate.medcofClass}` });
   if (today && !today.tasks?.anki) alerts.push({ tone: "info", text: "Anki pendente hoje." });
-  if (today && today.status !== "Concluido") alerts.push({ tone: "warning", text: "Tarefa obrigatoria incompleta no plano de hoje." });
+  if (today && !["Feito", "Livre"].includes(today.status)) alerts.push({ tone: "warning", text: "Tarefa obrigatoria incompleta no plano de hoje." });
   if (oldError) alerts.push({ tone: "danger", text: `Erro aberto ha mais de 7 dias: ${oldError.topic || oldError.subject}` });
   if (weekQuestions < 80) alerts.push({ tone: "info", text: `Poucas questoes na semana: ${weekQuestions}/80.` });
   if (upcomingSim) alerts.push({ tone: "info", text: `Simulado proximo: ${upcomingSim.name}.` });
   return alerts.slice(0, 6);
+}
+
+function isFreeDay(day) {
+  return /domingo/i.test(day.weekday || "") && !day.medcofClass && !day.stepClass;
+}
+
+function cleanText(value = "") {
+  return String(value || "").trim().replace(/\s+/g, " ");
+}
+
+function normalizeErrorType(type = "") {
+  const allowed = [
+    "Falta de conteudo",
+    "Conduta/protocolo",
+    "Confusao conceitual",
+    "Fisiopatologia/mecanismo",
+    "Interpretacao do enunciado",
+    "Desatencao/leitura rapida",
+    "Tempo/pressa",
+    "Chute/incerteza"
+  ];
+  const nextType = type || "Falta de conteudo";
+  return allowed.includes(nextType) ? nextType : "Falta de conteudo";
+}
+
+function summarizeErrors(errors = [], now = todayISO()) {
+  const open = errors.filter((error) => error.status === "Aberto");
+  const resolved = errors.filter((error) => error.status === "Resolvido");
+  const recurring = errors.filter((error) => error.status === "Recorrente");
+  const overdue = errors.filter((error) => error.reviewDate && error.reviewDate < now && !["Resolvido", "Revisado"].includes(error.status));
+  return {
+    total: errors.length,
+    open: open.length,
+    resolved: resolved.length,
+    recurring: recurring.length,
+    overdue: overdue.length,
+    topics: topEntries(groupCount(errors, (error) => error.topic || "Sem tema"), 6).map(([label, value]) => ({ label, value })),
+    byType: groupCount(errors, (error) => error.type),
+    bySubject: groupCount(errors, (error) => error.subject),
+    bySystem: groupCount(errors, (error) => error.system)
+  };
 }
 
 function summarizeAccuracy(items, key) {
