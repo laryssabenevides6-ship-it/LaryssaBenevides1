@@ -249,6 +249,8 @@ function todayPlan(day, now) {
     ["anki", "Anki", `Anki: ${day.tasks.anki ? "Feito" : "Pendente"}`],
     ["errors", "Revisao de erros", day.errorReview || "Revisar erros abertos"]
   ];
+  const pendingTasks = taskOrder.filter(([key]) => !day.tasks?.[key]);
+  const nextTask = pendingTasks[0]?.[1] || "Tudo feito";
   return `<section class="panel hero-plan">
     <div class="today-hero-header">
       <div>
@@ -263,6 +265,14 @@ function todayPlan(day, now) {
         <strong>${taskCompletion(day)}%</strong>
         <div class="today-progress"><i style="width:${taskCompletion(day)}%"></i></div>
       </div>
+      <div>
+        <small>Proxima tarefa</small>
+        <strong>${nextTask}</strong>
+      </div>
+      <div>
+        <small>Faltam</small>
+        <strong>${pendingTasks.length} tarefa(s)</strong>
+      </div>
     </div>
     <div class="today-execution-layout">
       <div class="today-main-list">
@@ -276,15 +286,15 @@ function todayPlan(day, now) {
 function planTaskCard(day, key, label, value, index = 1) {
   return `<div class="plan-task-card ${day.tasks?.[key] ? "done" : ""}">
     <div class="task-number">${index}</div>
-    <label class="card-check" title="Marcar ${label}">
-      <input type="checkbox" data-day-id="${day.id}" data-task="${key}" ${day.tasks?.[key] ? "checked" : ""} />
-      <span></span>
-    </label>
     <div class="task-copy">
       <small>${label}</small>
       <strong>${value}</strong>
       <em>${day.tasks?.[key] ? "Feito" : "Pendente"}</em>
     </div>
+    <label class="card-check" title="Marcar ${label}">
+      <input type="checkbox" data-day-id="${day.id}" data-task="${key}" ${day.tasks?.[key] ? "checked" : ""} />
+      <span></span>
+    </label>
   </div>`;
 }
 
@@ -352,9 +362,8 @@ function renderSchedule(d) {
         ${weeklyBoardGrid(selectedScheduleWeek, board)}
       </section>
       <section class="panel">
-        <div class="section-title"><h2>Estudos fora do cronograma</h2><span>conta nas horas estudadas</span></div>
+        <div class="section-title"><h2>Estudos fora do cronograma</h2><span>aparecem no dia escolhido</span></div>
         ${outsideStudyForm()}
-        <div class="record-list outside-study-list">${(state.outsideStudies || []).slice().reverse().slice(0, 6).map(outsideStudyCard).join("") || empty("Nenhum estudo fora do cronograma registrado.")}</div>
       </section>
       <section class="panel">
         <div class="section-title"><h2>${weekRangeTitle(selectedScheduleWeek, weekItems)}</h2><span>${weekItems.length} dia(s)</span></div>
@@ -553,23 +562,35 @@ function renderQuestions(d) {
 function questionsForm() {
   return `<div class="section-title"><h2>Registrar questoes feitas</h2><span>simples e rapido</span></div>
   <form id="questionsForm" class="quick-question-form">
-    <div class="quick-row two">
-      ${fieldInput("date", "Data", "", "date", true, "", todayISO())}
-      ${fieldSelect("source", "Fonte", SOURCE_OPTIONS)}
-    </div>
-    <div class="quick-row">
-      ${fieldMultiSelect("subject", "Materias", SUBJECT_OPTIONS)}
-      ${fieldMultiSelect("system", "Sistemas", SYSTEM_OPTIONS)}
-      ${fieldInput("topic", "Tema / observacao do bloco", "Opcional")}
-    </div>
-    <div class="quick-row result-row">
-      ${fieldInput("questions", "Numero de questoes", "20", "number", true, 'min="1"')}
-      ${fieldInput("correct", "Acertos", "15", "number", true, 'min="0"')}
-      ${fieldInput("minutes", "Minutos", "40", "number", false, 'min="0"')}
-      ${fieldInput("accuracy", "Percentual", "Auto", "text", false, "readonly")}
-      ${fieldInput("avgTime", "Tempo por questao", "Auto", "text", false, "readonly")}
-    </div>
-    <label class="field full-field"><span>Observacoes do bloco</span><textarea name="notes" placeholder="Opcional: dificuldade geral, fonte, comentarios..."></textarea></label>
+    <fieldset class="question-section">
+      <legend>1. Dados do bloco</legend>
+      <div class="quick-row two">
+        ${fieldInput("date", "Data", "", "date", true, "", todayISO())}
+        ${fieldSelect("source", "Fonte", SOURCE_OPTIONS)}
+      </div>
+    </fieldset>
+    <fieldset class="question-section">
+      <legend>2. Conteudo treinado</legend>
+      <div class="quick-row question-classification">
+        ${fieldMultiSelect("subject", "Materias", SUBJECT_OPTIONS)}
+        ${fieldMultiSelect("system", "Sistemas", SYSTEM_OPTIONS)}
+        ${fieldInput("topic", "Tema / observacao do bloco", "Opcional")}
+      </div>
+    </fieldset>
+    <fieldset class="question-section">
+      <legend>3. Resultado</legend>
+      <div class="quick-row result-row">
+        ${fieldInput("questions", "Numero de questoes", "20", "number", true, 'min="1"')}
+        ${fieldInput("correct", "Acertos", "15", "number", true, 'min="0"')}
+        ${fieldInput("minutes", "Minutos", "40", "number", false, 'min="0"')}
+        ${fieldInput("accuracy", "Percentual", "Auto", "text", false, "readonly")}
+        ${fieldInput("avgTime", "Tempo por questao", "Auto", "text", false, "readonly")}
+      </div>
+    </fieldset>
+    <fieldset class="question-section">
+      <legend>4. Observacoes</legend>
+      <label class="field full-field"><span>Observacoes do bloco</span><textarea name="notes" placeholder="Opcional: dificuldade geral, fonte, comentarios..."></textarea></label>
+    </fieldset>
     <button class="primary-button submit-main" type="submit">Salvar bloco de questoes</button>
   </form>`;
 }
@@ -906,14 +927,6 @@ function outsideStudyForm() {
   </form>`;
 }
 
-function outsideStudyCard(study) {
-  return `<article class="task-card outside-study-card">
-    <div><strong>${study.lesson || study.topic || study.subject}</strong><span>${fmtDate(study.date)}</span></div>
-    <p>${study.subject}${study.system ? ` · ${study.system}` : ""}${study.topic ? ` · ${study.topic}` : ""}</p>
-    <button class="danger-button" data-action="remove-outside" data-study-id="${study.id}">Remover</button>
-  </article>`;
-}
-
 function historyList(items) {
   return `<div class="record-list">${items
     .map((item) => `<div class="list-row"><strong>${fmtDate(item.date)} · ${item.source}</strong><span>${item.correct}/${item.questions} · ${item.accuracy}% · ${item.secondsPerQuestion || 0}s/q</span></div>`)
@@ -968,16 +981,20 @@ function fieldSelect(name, label, options, required = true, value = "") {
 
 function fieldMultiSelect(name, label, options, required = true, value = "") {
   const selected = splitLabels(value);
-  return `<label class="field multi-field"><span>${label}</span><select name="${name}" multiple ${required ? "required" : ""}>${options
-    .map((option) => `<option ${selected.includes(option) ? "selected" : ""}>${option}</option>`)
-    .join("")}</select><small>Segure Ctrl para marcar mais de uma opcao.</small></label>`;
+  return `<fieldset class="field multi-field" data-multi-field="${name}">
+    <legend>${label}</legend>
+    <div class="multi-options">${options
+      .map((option) => `<label><input type="checkbox" name="${name}" value="${option}" ${selected.includes(option) ? "checked" : ""} /><span>${option}</span></label>`)
+      .join("")}</div>
+  </fieldset>`;
 }
 
 function formToObject(form) {
   const formData = new FormData(form);
   const data = Object.fromEntries(formData);
-  form.querySelectorAll("select[multiple][name]").forEach((selectEl) => {
-    data[selectEl.name] = formData.getAll(selectEl.name).map((item) => String(item).trim()).filter(Boolean).join(", ");
+  form.querySelectorAll("[data-multi-field]").forEach((field) => {
+    const name = field.dataset.multiField;
+    data[name] = formData.getAll(name).map((item) => String(item).trim()).filter(Boolean).join(", ");
   });
   return data;
 }
