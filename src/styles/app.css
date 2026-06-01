@@ -2023,6 +2023,11 @@ th {
   color: var(--text);
 }
 
+body[data-theme="light"] .board-cell textarea {
+  background: #fff;
+  color: var(--text);
+}
+
 .errors-toolbar {
   display: flex;
   justify-content: space-between;

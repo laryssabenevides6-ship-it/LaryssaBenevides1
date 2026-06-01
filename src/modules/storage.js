@@ -204,16 +204,22 @@ function normalizeOutsideStudy(study) {
 }
 
 function normalizeError(error) {
-  const errorTypes = [
-    "Falta de conteudo",
-    "Conduta/protocolo",
-    "Confusao conceitual",
-    "Fisiopatologia/mecanismo",
-    "Interpretacao do enunciado",
-    "Desatencao/leitura rapida",
-    "Tempo/pressa",
-    "Chute/incerteza"
-  ];
+  const typeMigration = {
+    "Conduta/protocolo": "Falta de conteudo",
+    "Confusao conceitual": "Falta de conteudo",
+    "Fisiopatologia/mecanismo": "Falta de conteudo",
+    "Interpretacao do enunciado": "Erro de interpretacao",
+    "Desatencao/leitura rapida": "Erro de interpretacao",
+    "Tempo/pressa": "Tempo",
+    "Chute/incerteza": "Chute",
+    Conceito: "Falta de conteudo",
+    Interpretacao: "Erro de interpretacao",
+    Memorizacao: "Falta de conteudo",
+    Atencao: "Erro de interpretacao"
+  };
+  const errorTypes = ["Falta de conteudo", "Erro de interpretacao", "Tempo", "Chute"];
+  const type = typeMigration[error.type] || error.type;
+  const status = error.status === "Revisado" ? "Em revisao" : error.status === "Fechado" ? "Resolvido" : error.status;
   return {
     id: error.id || `error-${Date.now().toString(36)}`,
     date: error.date || todayISO(),
@@ -225,10 +231,10 @@ function normalizeError(error) {
     summary: cleanText(error.summary || error.question),
     reviewQuestion: cleanText(error.reviewQuestion || error.question),
     expectedAnswer: cleanText(error.expectedAnswer),
-    type: errorTypes.includes(error.type) ? error.type : "Falta de conteudo",
+    type: errorTypes.includes(type) ? type : "Falta de conteudo",
     severity: error.severity || "Media",
     reviewDate: error.reviewDate || "",
-    status: ["Aberto", "Revisado", "Resolvido", "Recorrente"].includes(error.status) ? error.status : "Aberto",
+    status: ["Aberto", "Em revisao", "Resolvido", "Recorrente"].includes(status) ? status : "Aberto",
     createdAt: error.createdAt || new Date().toISOString()
   };
 }

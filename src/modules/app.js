@@ -1,22 +1,15 @@
 import {
-  TASKS,
   addError,
   addOutsideStudy,
   addQuestionSession,
   addSimulation,
   deleteError,
   dayLabel,
-  finishStudyTimer,
   getDerived,
-  pauseStudyTimer,
-  resumeStudyTimer,
   runAutomations,
   saveWeeklyBoard,
   setTask,
-  startStudyTimer,
   taskCompletion,
-  taskLabel,
-  taskStatus,
   updateError,
   updateErrorStatus
 } from "./engine.js";
@@ -33,7 +26,7 @@ import {
   resetState,
   saveState
 } from "./storage.js";
-import { fmtDate, pct, todayISO } from "./utils.js";
+import { addDays, fmtDate, pct, todayISO } from "./utils.js";
 
 const views = [
   ["today", "Hoje", "H"],
@@ -45,7 +38,6 @@ const views = [
 ];
 
 const SOURCE_OPTIONS = ["MEDCOF", "UWorld", "Prova antiga", "Outro"];
-const TARGET_OPTIONS = ["Residencia BR", "Step 1", "Ambos"];
 const SUBJECT_OPTIONS = ["Clinica Medica", "Cirurgia Geral", "Pediatria", "Ginecologia e Obstetricia", "Preventiva/MFC", "Step 1", "Outro"];
 const SYSTEM_OPTIONS = [
   "Cardiovascular",
@@ -73,16 +65,11 @@ const SYSTEM_OPTIONS = [
 ];
 const ERROR_TYPE_OPTIONS = [
   "Falta de conteudo",
-  "Conduta/protocolo",
-  "Confusao conceitual",
-  "Fisiopatologia/mecanismo",
-  "Interpretacao do enunciado",
-  "Desatencao/leitura rapida",
-  "Tempo/pressa",
-  "Chute/incerteza"
+  "Erro de interpretacao",
+  "Tempo",
+  "Chute"
 ];
-const SEVERITY_OPTIONS = ["Baixa", "Media", "Alta", "Critica"];
-const ERROR_STATUS_OPTIONS = ["Aberto", "Revisado", "Resolvido", "Recorrente"];
+const ERROR_STATUS_OPTIONS = ["Aberto", "Em revisao", "Resolvido", "Recorrente"];
 
 let seed = [];
 let state;
@@ -243,28 +230,13 @@ function renderToday(d) {
   const day = d.today;
   return `
     ${todayPlan(day, d.now)}
-    <section class="quick-actions">
-      <button class="primary-button" data-action="goto-questions">Registrar questoes feitas</button>
-      <button class="secondary-button" data-action="goto-errors">Registrar erro</button>
-      <button class="secondary-button" data-action="mark-anki" data-day-id="${day?.id || ""}">Anki: ${day?.tasks?.anki ? "Feito" : "Pendente"}</button>
-    </section>
     <section class="panel">
-      <div class="section-title"><h2>Planejamento da Semana - Cronograma</h2><span>${d.weekDays.length} dias</span></div>
-      <div class="week-planner">${d.weekDays.map(weekDayCard).join("")}</div>
+      <div class="section-title"><h2>Erros para revisar hoje</h2><span>${d.errorSummary.dueToday.length}</span></div>
+      ${todayErrorReviews(d.errorSummary.dueToday)}
     </section>
     <section class="panel">
       <div class="section-title"><h2>Alertas</h2><span>prioridade do dia</span></div>
       ${alertList(d.alerts)}
-    </section>
-    <section class="panel">
-      <div class="section-title"><h2>Resumo simples de desempenho</h2><span>execucao</span></div>
-      <div class="grid metrics">
-        ${metric("Progresso", `${d.progress}%`, "cronograma")}
-        ${metric("Questoes semana", d.weekQuestions, "ultimos 7 dias")}
-        ${metric("Acertos", `${d.accuracy}%`, `${d.totalCorrect}/${d.totalQuestions}`)}
-        ${metric("Horas estudadas", `${d.hours}h`, `${d.studyTimerHours}h pelo cronometro`)}
-        ${metric("Erros abertos", d.openErrors.length, "para revisar")}
-      </div>
     </section>`;
 }
 
@@ -277,8 +249,6 @@ function todayPlan(day, now) {
     ["anki", "Anki", `Anki: ${day.tasks.anki ? "Feito" : "Pendente"}`],
     ["errors", "Revisao de erros", day.errorReview || "Revisar erros abertos"]
   ];
-  const pendingTasks = taskOrder.filter(([key]) => !day.tasks?.[key]);
-  const nextTask = pendingTasks[0]?.[1] || "Dia completo";
   return `<section class="panel hero-plan">
     <div class="today-hero-header">
       <div>
@@ -293,25 +263,12 @@ function todayPlan(day, now) {
         <strong>${taskCompletion(day)}%</strong>
         <div class="today-progress"><i style="width:${taskCompletion(day)}%"></i></div>
       </div>
-      <div>
-        <small>Proxima acao</small>
-        <strong>${nextTask}</strong>
-      </div>
-      <div>
-        <small>Faltam</small>
-        <strong>${pendingTasks.length} tarefa(s)</strong>
-      </div>
     </div>
     <div class="today-execution-layout">
       <div class="today-main-list">
         <div class="section-title compact-title"><h2>Fazer hoje</h2><span>marque conforme concluir</span></div>
         ${taskOrder.map(([key, label, value], index) => planTaskCard(day, key, label, value, index + 1)).join("")}
       </div>
-      <aside class="today-guide">
-        <div><small>Tarefa minima</small><strong>${day.minimumTask || "Anki + aula principal + questoes"}</strong></div>
-        <div><small>Plano normal</small><strong>${day.normalPlan || "Aulas + questoes + caderno de erros"}</strong></div>
-        <div><small>Extra se der tempo</small><strong>${day.extraPlan || "Reforcar ponto fraco"}</strong></div>
-      </aside>
     </div>
   </section>`;
 }
@@ -328,29 +285,21 @@ function planTaskCard(day, key, label, value, index = 1) {
       <strong>${value}</strong>
       <em>${day.tasks?.[key] ? "Feito" : "Pendente"}</em>
     </div>
-    ${studyTimerControls(day, key)}
   </div>`;
 }
 
-function studyTimerControls(day, key) {
-  if (!["medcof", "step"].includes(key)) return "";
-  const active = state.activeTimer;
-  const isThisTimer = active?.dayId === day.id && active?.taskKey === key;
-  if (isThisTimer) {
-    return `<div class="study-timer active">
-      <div><span>${active.pausedAt ? "Pausado" : "Cronometro ativo"}</span><strong data-active-timer-display>${formatStudyTimer(active)}</strong></div>
-      <div class="timer-actions">
-        <button class="secondary-button mini-button" data-action="${active.pausedAt ? "resume-timer" : "pause-timer"}" type="button">${active.pausedAt ? "Retomar" : "Pausar"}</button>
-        <button class="primary-button mini-button" data-action="finish-timer" type="button">Finalizar</button>
-      </div>
-    </div>`;
-  }
-  if (active) {
-    return `<div class="study-timer blocked"><span>Cronometro ativo em: ${active.title}</span></div>`;
-  }
-  return `<div class="study-timer">
-    <button class="secondary-button mini-button" data-action="start-timer" data-day-id="${day.id}" data-task-key="${key}" type="button">Iniciar cronometro</button>
-  </div>`;
+function todayErrorReviews(items = []) {
+  return `<div class="record-list">${
+    items
+      .map(
+        (error) => `<button class="today-error-review" data-action="review-error" data-error-id="${error.id}" type="button">
+          <strong>${error.topic}</strong>
+          <span>${error.reviewQuestion}</span>
+          <small>${error.type} - ${error.status}</small>
+        </button>`
+      )
+      .join("") || empty("Nenhum erro para revisar hoje.")
+  }</div>`;
 }
 
 function syncStudyTimerTicker() {
@@ -479,7 +428,6 @@ function scheduleLessonCard(day, key, source, subject, title, priority) {
         ${priority ? `<em>${priority}</em>` : ""}
       </div>
       <p>${title}</p>
-      ${studyTimerControls(day, key)}
     </div>
     <div class="lesson-side">
       <span>${source}</span>
@@ -498,10 +446,9 @@ function outsideStudyScheduleCard(study) {
       </div>
       <p>${study.lesson || study.topic || "Estudo registrado"}</p>
       ${study.system || study.topic ? `<small>${[study.system, study.topic].filter(Boolean).join(" - ")}</small>` : ""}
-      ${study.notes ? `<small>${study.notes}</small>` : ""}
     </div>
     <div class="lesson-side">
-      <span>${study.minutes || 0} min</span>
+      <span>Extra</span>
       <small>Registrado</small>
     </div>
   </article>`;
@@ -546,11 +493,16 @@ function weeklyBoardGrid(week, rawContent) {
   const data = parseBoard(rawContent);
   const periods = ["Manha", "Tarde", "Noite"];
   const days = ["Segunda", "Terca", "Quarta", "Quinta", "Sexta", "Sabado", "Domingo"];
+  const weekItems = state.schedule.filter((day) => day.week === week).sort((a, b) => a.date.localeCompare(b.date));
+  const dayLabels = days.map((day, index) => {
+    const date = weekItems[index]?.date;
+    return date ? `${day} ${date.slice(8, 10)}/${date.slice(5, 7)}` : day;
+  });
   return `<div class="board-grid" data-board-week="${week}">
     ${periods
       .map(
         (period) => `<div class="board-period">${period}</div>${days
-          .map((day) => `<label class="board-cell"><span>${day}</span><textarea data-board-cell="${period}.${day}" placeholder="${day} ${period.toLowerCase()}">${escapeHtml(data[period]?.[day] || "")}</textarea></label>`)
+          .map((day, index) => `<label class="board-cell"><span>${dayLabels[index]}</span><textarea data-board-cell="${period}.${day}" placeholder="${dayLabels[index]} ${period.toLowerCase()}">${escapeHtml(data[period]?.[day] || "")}</textarea></label>`)
           .join("")}`
       )
       .join("")}
@@ -581,7 +533,7 @@ function renderQuestions(d) {
       <div>
         <p class="eyebrow">Questoes</p>
         <h2>Registre o bloco em menos de um minuto</h2>
-        <p class="muted">Preencha o essencial. Se apareceu um erro importante, registre no mesmo lugar e ele entra no Caderno de Erros.</p>
+        <p class="muted">Preencha apenas desempenho quantitativo. Erros ficam separados no Caderno de Erros.</p>
       </div>
       <div class="quick-result">
         <div><span>Acerto do bloco</span><strong id="qAccuracyPreview">-</strong></div>
@@ -593,7 +545,6 @@ function renderQuestions(d) {
       ${metric("Questoes", d.totalQuestions, "registradas")}
       ${metric("Acertos", `${d.accuracy}%`, "geral")}
       ${metric("Semana", d.weekQuestions, "ultimos 7 dias")}
-      ${metric("Horas", `${d.hours}h`, "questoes e simulados")}
     </div>
     <section class="panel simulation-panel">${simulationForm()}</section>
     <section class="panel"><div class="section-title"><h2>Historico recente</h2><span>ultimos registros</span></div>${historyList(state.sessions.slice(-8).reverse())}</section>`;
@@ -603,32 +554,21 @@ function questionsForm() {
   return `<div class="section-title"><h2>Registrar questoes feitas</h2><span>simples e rapido</span></div>
   <form id="questionsForm" class="quick-question-form">
     <div class="quick-row two">
+      ${fieldInput("date", "Data", "", "date", true, "", todayISO())}
       ${fieldSelect("source", "Fonte", SOURCE_OPTIONS)}
-      ${fieldSelect("target", "Prova-alvo", TARGET_OPTIONS)}
     </div>
     <div class="quick-row">
-      ${fieldSelect("subject", "Materia", SUBJECT_OPTIONS)}
-      ${fieldSelect("system", "Sistema", SYSTEM_OPTIONS)}
-      ${fieldInput("topic", "Tema", "Opcional")}
+      ${fieldMultiSelect("subject", "Materias", SUBJECT_OPTIONS)}
+      ${fieldMultiSelect("system", "Sistemas", SYSTEM_OPTIONS)}
+      ${fieldInput("topic", "Tema / observacao do bloco", "Opcional")}
     </div>
     <div class="quick-row result-row">
-      ${fieldInput("questions", "Questoes", "20", "number", true, 'min="1"')}
+      ${fieldInput("questions", "Numero de questoes", "20", "number", true, 'min="1"')}
       ${fieldInput("correct", "Acertos", "15", "number", true, 'min="0"')}
-      ${fieldInput("minutes", "Minutos", "40", "number", true, 'min="0"')}
+      ${fieldInput("minutes", "Minutos", "40", "number", false, 'min="0"')}
       ${fieldInput("accuracy", "Percentual", "Auto", "text", false, "readonly")}
       ${fieldInput("avgTime", "Tempo por questao", "Auto", "text", false, "readonly")}
     </div>
-    <details class="inline-error-box">
-      <summary>Adicionar erro ao caderno de erros</summary>
-      <div class="quick-row">
-        ${fieldInput("errorTopic", "Tema do erro", "Ex.: choque distributivo")}
-        ${fieldSelect("errorType", "Tipo", ERROR_TYPE_OPTIONS, false)}
-        ${fieldSelect("errorSeverity", "Gravidade", SEVERITY_OPTIONS, false)}
-      </div>
-      <label class="field full-field"><span>Resumo do erro</span><textarea name="errorSummary" placeholder="O que voce errou neste bloco?"></textarea></label>
-      <label class="field full-field"><span>Pergunta de revisao</span><textarea name="errorReviewQuestion" placeholder="Pergunta para revisar esse erro depois."></textarea></label>
-      <label class="field full-field"><span>Resposta esperada</span><textarea name="errorExpectedAnswer" placeholder="Resposta que voce espera lembrar."></textarea></label>
-    </details>
     <label class="field full-field"><span>Observacoes do bloco</span><textarea name="notes" placeholder="Opcional: dificuldade geral, fonte, comentarios..."></textarea></label>
     <button class="primary-button submit-main" type="submit">Salvar bloco de questoes</button>
   </form>`;
@@ -656,16 +596,12 @@ function errorForm(error = null, formId = "errorForm") {
   <form id="${formId}" class="form">
     ${isEdit ? `<input type="hidden" name="id" value="${error.id}" />` : ""}
     <label class="field"><span>Data</span><input name="date" type="date" value="${error?.date || todayISO()}" required /></label>
-    ${fieldSelect("source", "Fonte", SOURCE_OPTIONS, true, error?.source)}
-    ${fieldSelect("target", "Prova-alvo", TARGET_OPTIONS, true, error?.target)}
     ${fieldSelect("subject", "Materia", SUBJECT_OPTIONS, true, error?.subject)}
-    ${fieldSelect("system", "Sistema", SYSTEM_OPTIONS, true, error?.system)}
+    ${fieldMultiSelect("system", "Sistemas", SYSTEM_OPTIONS, true, error?.system)}
     ${fieldInput("topic", "Tema", "Tema especifico", "text", false, "", error?.topic)}
-    <label class="field full-field"><span>Resumo do erro</span><textarea name="summary" placeholder="Resumo do erro" required>${escapeHtml(error?.summary || "")}</textarea></label>
-    <label class="field full-field"><span>Pergunta de revisao</span><textarea name="reviewQuestion" placeholder="Transforme o erro em uma pergunta para revisar depois.">${escapeHtml(error?.reviewQuestion || "")}</textarea></label>
+    <label class="field full-field"><span>Pergunta de revisao</span><textarea name="reviewQuestion" placeholder="Transforme o erro em uma pergunta para revisar depois." required>${escapeHtml(error?.reviewQuestion || "")}</textarea></label>
     <label class="field full-field"><span>Resposta esperada</span><textarea name="expectedAnswer" placeholder="Qual resposta voce espera acertar na revisao?">${escapeHtml(error?.expectedAnswer || "")}</textarea></label>
     ${fieldSelect("type", "Tipo de erro", ERROR_TYPE_OPTIONS, true, error?.type)}
-    ${fieldSelect("severity", "Gravidade", SEVERITY_OPTIONS, true, error?.severity)}
     <label class="field"><span>Data de revisao</span><input name="reviewDate" type="date" value="${error?.reviewDate || ""}" /></label>
     ${fieldSelect("status", "Status", ERROR_STATUS_OPTIONS, true, error?.status)}
     <button class="primary-button" type="submit">${isEdit ? "Salvar alteracoes" : "Salvar erro"}</button>
@@ -677,7 +613,6 @@ function renderDashboard(d) {
       ${metric("Progresso", `${d.progress}%`, "dias feitos")}
       ${metric("Questoes", d.totalQuestions, "total")}
       ${metric("Acertos", `${d.accuracy}%`, "geral")}
-      ${metric("Horas totais", `${d.hours}h`, `${d.studyTimerHours}h pelo cronometro`)}
     </div>
     <div class="dashboard-grid">
       <section class="panel">${barList(d.weekProgress, "Execucao da semana")}</section>
@@ -685,7 +620,7 @@ function renderDashboard(d) {
       <section class="panel">${barList(d.systemPerformance, "Desempenho por sistema")}</section>
       <section class="panel">${barPairs(d.questionsBySource, "Questoes por fonte")}</section>
       <section class="panel">${barPairs(d.statusCounts, "Status do cronograma")}</section>
-      <section class="panel">${errorDashboard(d.errorSummary)}</section>
+      <section class="panel wide">${errorDashboard(d.errorSummary)}</section>
       <section class="panel">${simulationCompare()}</section>
     </div>`;
 }
@@ -770,12 +705,6 @@ function openDayModal(dayId) {
       ${dailyDetailCard(day, "anki", "Anki", `Anki: ${day.tasks?.anki ? "Feito" : "Pendente"}`)}
       ${dailyDetailCard(day, "errors", "Revisao de erros", day.errorReview || "Revisar erros abertos")}
     </div>
-    <section class="modal-study-section">
-      <div class="section-title"><h2>Cronometro de estudo</h2><span>vinculado a aula</span></div>
-      <div class="modal-study-timers">
-        ${["medcof", "step"].map((key) => `<article><strong>${taskLabel(key)}</strong>${studyTimerControls(day, key)}</article>`).join("")}
-      </div>
-    </section>
   </div>`;
   if (!$("#modal").open) $("#modal").showModal();
   $("#modalContent").querySelectorAll("[data-task]").forEach((input) =>
@@ -810,14 +739,23 @@ function handleAction(event) {
     openErrorModal(event.currentTarget.dataset.errorId);
     return;
   }
+  if (action === "review-error") {
+    openReviewErrorModal(event.currentTarget.dataset.errorId);
+    return;
+  }
+  if (action === "review-error-mastered") {
+    state = updateErrorStatus(state, event.currentTarget.dataset.errorId, "Resolvido");
+    $("#modal")?.close();
+  }
+  if (action === "review-error-repeat") {
+    const error = state.errors.find((item) => item.id === event.currentTarget.dataset.errorId);
+    if (error) state = updateError(state, error.id, { ...error, status: "Em revisao", reviewDate: addDays(todayISO(), 15) });
+    $("#modal")?.close();
+  }
   if (action === "delete-error") {
     if (!confirm("Apagar este erro do caderno?")) return;
     state = deleteError(state, event.currentTarget.dataset.errorId);
   }
-  if (action === "start-timer") state = startStudyTimer(state, event.currentTarget.dataset.dayId, event.currentTarget.dataset.taskKey);
-  if (action === "pause-timer") state = pauseStudyTimer(state);
-  if (action === "resume-timer") state = resumeStudyTimer(state);
-  if (action === "finish-timer") state = finishStudyTimer(state);
   if (action === "mark-anki" || action === "toggle-anki") {
     const day = state.schedule.find((item) => item.id === event.currentTarget.dataset.dayId);
     state = setTask(state, event.currentTarget.dataset.dayId, "anki", !day?.tasks?.anki);
@@ -844,31 +782,35 @@ function openErrorModal(errorId) {
   $("#errorEditForm").addEventListener("submit", handleErrorSubmit);
 }
 
+function openReviewErrorModal(errorId) {
+  const error = state.errors.find((item) => item.id === errorId);
+  if (!error) return;
+  $("#modalContent").innerHTML = `<div class="modal-day review-error-modal">
+    <div class="section-title"><h2>Voce considera este erro dominado?</h2><span>${error.topic || "Sem tema"}</span></div>
+    <article class="task-card">
+      <strong>Pergunta de revisao</strong>
+      <p>${error.reviewQuestion || "Sem pergunta de revisao."}</p>
+      <strong>Resposta esperada</strong>
+      <p>${error.expectedAnswer || "Sem resposta esperada."}</p>
+    </article>
+    <div class="modal-actions">
+      <button class="primary-button" data-action="review-error-mastered" data-error-id="${error.id}" type="button">Sim, dominei</button>
+      <button class="secondary-button" data-action="review-error-repeat" data-error-id="${error.id}" type="button">Ainda nao dominei</button>
+    </div>
+  </div>`;
+  if (!$("#modal").open) $("#modal").showModal();
+  $("#modalContent").querySelectorAll("[data-action]").forEach((button) => button.addEventListener("click", handleAction));
+}
+
 function handleQuestionsSubmit(event) {
   event.preventDefault();
-  const data = Object.fromEntries(new FormData(event.currentTarget));
+  const data = formToObject(event.currentTarget);
   state = addQuestionSession(state, {
     ...data,
     mode: "Nao informado",
-    selection: data.errorSummary ? "Revisao de erros" : "Por assunto",
+    selection: "Por assunto",
     format: "Bloco comum"
   });
-  if (data.errorSummary?.trim()) {
-    state = addError(state, {
-      date: todayISO(),
-      source: data.source,
-      target: data.target,
-      subject: data.subject,
-      system: data.system,
-      topic: (data.errorTopic || data.topic || "").trim(),
-      summary: data.errorSummary,
-      reviewQuestion: data.errorReviewQuestion,
-      expectedAnswer: data.errorExpectedAnswer,
-      type: data.errorType || "Falta de conteudo",
-      severity: data.errorSeverity || "Media",
-      status: "Aberto"
-    });
-  }
   const today = getDerived(state).today;
   if (today?.date === todayISO()) state = setTask(state, today.id, "questions", true);
   event.currentTarget.reset();
@@ -885,7 +827,7 @@ function handleSimulationSubmit(event) {
 
 function handleOutsideStudySubmit(event) {
   event.preventDefault();
-  const data = Object.fromEntries(new FormData(event.currentTarget));
+  const data = formToObject(event.currentTarget);
   state = addOutsideStudy(state, data);
   const matchingDay = state.schedule.find((day) => day.date === data.date);
   if (matchingDay?.week) selectedScheduleWeek = matchingDay.week;
@@ -895,7 +837,7 @@ function handleOutsideStudySubmit(event) {
 
 function handleErrorSubmit(event) {
   event.preventDefault();
-  const data = Object.fromEntries(new FormData(event.currentTarget));
+  const data = formToObject(event.currentTarget);
   state = data.id ? updateError(state, data.id, data) : addError(state, data);
   event.currentTarget.reset();
   if (event.currentTarget.id === "errorEditForm") $("#modal").close();
@@ -926,8 +868,9 @@ function updateQuestionCalculatedFields(event) {
   const questions = Number(form.questions.value) || 0;
   const correct = Number(form.correct.value) || 0;
   const minutes = Number(form.minutes.value) || 0;
+  const hasMinutes = form.minutes.value !== "";
   const accuracy = questions ? `${pct(correct, questions)}%` : "";
-  const avg = questions ? `${Math.round((minutes * 60) / questions)} s/questao` : "";
+  const avg = questions && hasMinutes ? `${Math.round((minutes * 60) / questions)} s/questao` : "";
   form.accuracy.value = accuracy;
   form.avgTime.value = avg;
   $("#qAccuracyPreview") && ($("#qAccuracyPreview").textContent = accuracy || "-");
@@ -940,8 +883,7 @@ function checkbox(day, key, label) {
 
 function errorCard(error) {
   return `<article class="task-card">
-    <div><strong>${error.topic || error.subject}</strong><span>${fmtDate(error.date)} - ${error.source} - ${error.target || "Ambos"} - ${error.severity}</span></div>
-    <p>${error.summary}</p>
+    <div><strong>${error.topic || error.subject}</strong><span>${fmtDate(error.date)} - ${error.subject}</span></div>
     ${error.reviewQuestion ? `<small>Pergunta: ${error.reviewQuestion}</small>` : ""}
     ${error.expectedAnswer ? `<small>Resposta esperada: ${error.expectedAnswer}</small>` : ""}
     <small>${error.type} - ${error.subject} - ${error.system}</small>
@@ -955,22 +897,19 @@ function errorCard(error) {
 
 function outsideStudyForm() {
   return `<form id="outsideStudyForm" class="form compact outside-study-form">
-    <input name="date" type="date" value="${todayISO()}" required />
-    <input name="subject" placeholder="Materia" required />
-    <input name="system" placeholder="Sistema" />
-    <input name="topic" placeholder="Tema" />
-    <input name="lesson" placeholder="Aula estudada" />
-    <input name="minutes" type="number" min="1" placeholder="Duracao em minutos" required />
-    <textarea name="notes" placeholder="Observacoes"></textarea>
+    ${fieldInput("date", "Data", "", "date", true, "", todayISO())}
+    ${fieldSelect("subject", "Materia", SUBJECT_OPTIONS)}
+    ${fieldSelect("system", "Sistema", SYSTEM_OPTIONS, false)}
+    ${fieldInput("topic", "Tema", "Tema")}
+    ${fieldInput("lesson", "Aula estudada", "Aula estudada")}
     <button class="primary-button" type="submit">Adicionar estudo fora do cronograma</button>
   </form>`;
 }
 
 function outsideStudyCard(study) {
   return `<article class="task-card outside-study-card">
-    <div><strong>${study.lesson || study.topic || study.subject}</strong><span>${fmtDate(study.date)} · ${study.minutes} min</span></div>
+    <div><strong>${study.lesson || study.topic || study.subject}</strong><span>${fmtDate(study.date)}</span></div>
     <p>${study.subject}${study.system ? ` · ${study.system}` : ""}${study.topic ? ` · ${study.topic}` : ""}</p>
-    ${study.notes ? `<small>${study.notes}</small>` : ""}
     <button class="danger-button" data-action="remove-outside" data-study-id="${study.id}">Remover</button>
   </article>`;
 }
@@ -1027,6 +966,29 @@ function fieldSelect(name, label, options, required = true, value = "") {
   return `<label class="field"><span>${label}</span><select name="${name}" ${required ? "required" : ""}><option value="">Escolha</option>${options.map((option) => `<option ${option === value ? "selected" : ""}>${option}</option>`).join("")}</select></label>`;
 }
 
+function fieldMultiSelect(name, label, options, required = true, value = "") {
+  const selected = splitLabels(value);
+  return `<label class="field multi-field"><span>${label}</span><select name="${name}" multiple ${required ? "required" : ""}>${options
+    .map((option) => `<option ${selected.includes(option) ? "selected" : ""}>${option}</option>`)
+    .join("")}</select><small>Segure Ctrl para marcar mais de uma opcao.</small></label>`;
+}
+
+function formToObject(form) {
+  const formData = new FormData(form);
+  const data = Object.fromEntries(formData);
+  form.querySelectorAll("select[multiple][name]").forEach((selectEl) => {
+    data[selectEl.name] = formData.getAll(selectEl.name).map((item) => String(item).trim()).filter(Boolean).join(", ");
+  });
+  return data;
+}
+
+function splitLabels(value = "") {
+  return String(value || "")
+    .split(/[,;|]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 function simulationCompare() {
   const last = state.simulations.at(-1);
   if (!last) return `<div class="section-title"><h2>Simulados</h2><span>historico</span></div>${empty("Nenhum simulado finalizado.")}`;
@@ -1063,7 +1025,7 @@ function errorDashboard(summary) {
     <div class="grid metrics error-metrics">
       ${metric("Total", summary.total, "erros registrados")}
       ${metric("Abertos", summary.open, "pendentes")}
-      ${metric("Resolvidos", summary.resolved, "fechados")}
+      ${metric("Resolvidos", summary.resolved, "resolvidos")}
       ${metric("Recorrentes", summary.recurring, "repetidos")}
       ${metric("Revisão vencida", summary.overdue, "para revisar")}
     </div>
@@ -1085,7 +1047,7 @@ function errorsDueToday(items = []) {
           (error) => `<article class="error-review-item">
             <strong>${error.topic}</strong>
             <p>${error.reviewQuestion}</p>
-            <small>${error.type} - ${error.severity} - ${error.status}</small>
+            <small>${error.type} - ${error.status}</small>
           </article>`
         )
         .join("") || empty("Nenhum erro para revisar hoje.")

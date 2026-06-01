@@ -1,4 +1,4 @@
-import { addDays, clamp, diffDays, groupCount, pct, safeNumber, todayISO, topEntries, uid } from "./utils.js";
+import { addDays, clamp, groupCount, pct, safeNumber, todayISO, topEntries, uid } from "./utils.js";
 
 export const TASKS = [
   ["medcof", "Aula MEDCOF"],
@@ -97,6 +97,7 @@ export function addQuestionSession(state, payload) {
   const questions = Math.max(0, safeNumber(payload.questions));
   const correct = clamp(safeNumber(payload.correct), 0, questions);
   const minutes = Math.max(0, safeNumber(payload.minutes));
+  const hasMinutes = payload.minutes !== undefined && payload.minutes !== "";
   const accuracy = pct(correct, questions);
   state.sessions.push({
     id: uid("questions"),
@@ -106,7 +107,6 @@ export function addQuestionSession(state, payload) {
     mode: payload.mode || "Tutor",
     selection: payload.selection || "Por assunto",
     format: payload.format || "Bloco comum",
-    target: payload.target || "Ambos",
     subject: cleanText(payload.subject) || "Nao classificado",
     system: cleanText(payload.system) || "Nao classificado",
     topic: cleanText(payload.topic),
@@ -114,7 +114,7 @@ export function addQuestionSession(state, payload) {
     correct,
     accuracy,
     minutes,
-    secondsPerQuestion: questions ? Math.round((minutes * 60) / questions) : 0,
+    secondsPerQuestion: questions && hasMinutes ? Math.round((minutes * 60) / questions) : "",
     notes: payload.notes || ""
   });
   return state;
@@ -196,10 +196,11 @@ export function deleteError(state, errorId) {
 }
 
 function errorPayload(payload) {
+  const date = payload.date || todayISO();
   return {
-    date: payload.date || todayISO(),
-    source: payload.source || "MEDCOF",
-    target: payload.target || "Ambos",
+    date,
+    source: payload.source || "",
+    target: payload.target || "",
     subject: cleanText(payload.subject) || "Nao classificado",
     system: cleanText(payload.system) || "Nao classificado",
     topic: cleanText(payload.topic),
@@ -207,16 +208,16 @@ function errorPayload(payload) {
     reviewQuestion: cleanText(payload.reviewQuestion),
     expectedAnswer: cleanText(payload.expectedAnswer),
     type: normalizeErrorType(payload.type),
-    severity: payload.severity || "Media",
-    reviewDate: payload.reviewDate || addDays(todayISO(), 7),
-    status: payload.status || "Aberto"
+    severity: payload.severity || "",
+    reviewDate: payload.reviewDate || addDays(date, 7),
+    status: normalizeErrorStatus(payload.status || "Aberto")
   };
 }
 
 export function updateErrorStatus(state, errorId, status) {
   const error = state.errors.find((item) => item.id === errorId);
   if (!error) return state;
-  error.status = status;
+  error.status = normalizeErrorStatus(status);
   return state;
 }
 
@@ -303,20 +304,14 @@ export function dayLabel(day) {
 function buildAlerts(state, now, overdueDays, openErrors, weekQuestions) {
   const alerts = [];
   const today = state.schedule.find((item) => item.date === now);
-  const diamondLate = overdueDays.find((item) => String(item.medcofPriority || "").toLowerCase().includes("diamante"));
-  const stepLate = overdueDays.find((item) => item.stepClass);
-  const greenLate = overdueDays.find((item) => /verde|alta/i.test(`${item.medcofPriority} ${item.monthlyPriority}`));
-  const oldError = openErrors.find((error) => diffDays(error.date, now) <= -7);
-  const upcomingSim = state.simulations.find((sim) => sim.scheduledDate && diffDays(now, sim.scheduledDate) >= -7 && diffDays(now, sim.scheduledDate) <= 0);
+  const errorSummary = summarizeErrors(state.errors, now);
 
-  if (diamondLate) alerts.push({ tone: "danger", text: `Aula Diamante MEDCOF atrasada: ${diamondLate.medcofClass}` });
-  if (stepLate) alerts.push({ tone: "warning", text: `B&B essencial atrasado: ${stepLate.stepClass}` });
-  if (greenLate) alerts.push({ tone: "warning", text: `Alta prioridade atrasada: ${greenLate.medcofClass}` });
   if (today && !today.tasks?.anki) alerts.push({ tone: "info", text: "Anki pendente hoje." });
   if (today && !["Feito", "Livre"].includes(today.status)) alerts.push({ tone: "warning", text: "Tarefa obrigatoria incompleta no plano de hoje." });
-  if (oldError) alerts.push({ tone: "danger", text: `Erro aberto ha mais de 7 dias: ${oldError.topic || oldError.subject}` });
+  if (errorSummary.dueToday.length) alerts.push({ tone: "danger", text: `Revisoes pendentes: ${errorSummary.dueToday.length} erros para revisar hoje.` });
+  if (errorSummary.recurringTopics[0]) alerts.push({ tone: "warning", text: `Tema recorrente: ${errorSummary.recurringTopics[0].label}.` });
+  if (errorSummary.topErrorConcentration) alerts.push({ tone: "warning", text: `Maior concentracao de erros: ${errorSummary.topErrorConcentration}.` });
   if (weekQuestions < 80) alerts.push({ tone: "info", text: `Poucas questoes na semana: ${weekQuestions}/80.` });
-  if (upcomingSim) alerts.push({ tone: "info", text: `Simulado proximo: ${upcomingSim.name}.` });
   return alerts.slice(0, 6);
 }
 
@@ -331,16 +326,48 @@ function cleanText(value = "") {
 function normalizeErrorType(type = "") {
   const allowed = [
     "Falta de conteudo",
-    "Conduta/protocolo",
-    "Confusao conceitual",
-    "Fisiopatologia/mecanismo",
-    "Interpretacao do enunciado",
-    "Desatencao/leitura rapida",
-    "Tempo/pressa",
-    "Chute/incerteza"
+    "Erro de interpretacao",
+    "Tempo",
+    "Chute"
   ];
-  const nextType = type || "Falta de conteudo";
-  return allowed.includes(nextType) ? nextType : "Falta de conteudo";
+  const migration = {
+    "Conduta/protocolo": "Falta de conteudo",
+    "Confusao conceitual": "Falta de conteudo",
+    "Fisiopatologia/mecanismo": "Falta de conteudo",
+    "Interpretacao do enunciado": "Erro de interpretacao",
+    "Desatencao/leitura rapida": "Erro de interpretacao",
+    "Tempo/pressa": "Tempo",
+    "Chute/incerteza": "Chute"
+  };
+  const migrated = migration[type] || type;
+  return allowed.includes(migrated) ? migrated : "Falta de conteudo";
+}
+
+function normalizeErrorStatus(status = "") {
+  if (status === "Revisado") return "Em revisao";
+  if (status === "Fechado") return "Resolvido";
+  return ["Aberto", "Em revisao", "Resolvido", "Recorrente"].includes(status) ? status : "Aberto";
+}
+
+function splitLabels(value = "") {
+  return String(value || "")
+    .split(/[,;|]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function groupMultiCount(items, key) {
+  return items.reduce((acc, item) => {
+    const labels = splitLabels(item[key]);
+    (labels.length ? labels : ["Nao classificado"]).forEach((label) => {
+      acc[label] = (acc[label] || 0) + 1;
+    });
+    return acc;
+  }, {});
+}
+
+function topMapEntry(map = {}) {
+  return Object.entries(map).sort((a, b) => b[1] - a[1])[0];
 }
 
 function summarizeErrors(errors = [], now = todayISO()) {
@@ -348,11 +375,19 @@ function summarizeErrors(errors = [], now = todayISO()) {
   const resolved = errors.filter((error) => error.status === "Resolvido");
   const recurring = errors.filter((error) => error.status === "Recorrente");
   const dueToday = errors.filter((error) => error.reviewDate && error.reviewDate <= now && error.status !== "Resolvido");
+  const topicCounts = groupCount(errors, (error) => error.topic || "Sem tema");
+  const recurringTopics = topEntries(topicCounts, 20)
+    .filter(([, value]) => value >= 3)
+    .map(([label, value]) => ({ label, value }));
+  const bySubject = groupMultiCount(errors, "subject");
+  const bySystem = groupMultiCount(errors, "system");
+  const topSubject = topMapEntry(bySubject);
+  const topSystem = topMapEntry(bySystem);
   return {
     total: errors.length,
     open: open.length,
     resolved: resolved.length,
-    recurring: recurring.length,
+    recurring: Math.max(recurring.length, recurringTopics.length),
     overdue: dueToday.length,
     dueToday: dueToday
       .slice()
@@ -365,10 +400,12 @@ function summarizeErrors(errors = [], now = todayISO()) {
         severity: error.severity || "Nao informada",
         status: error.status || "Aberto"
       })),
-    topics: topEntries(groupCount(errors, (error) => error.topic || "Sem tema"), 6).map(([label, value]) => ({ label, value })),
+    recurringTopics,
+    topErrorConcentration: topSubject || topSystem ? [topSubject?.[0], topSystem?.[0]].filter(Boolean).join(" / ") : "",
+    topics: topEntries(topicCounts, 6).map(([label, value]) => ({ label, value })),
     byType: groupCount(errors, (error) => error.type),
-    bySubject: groupCount(errors, (error) => error.subject),
-    bySystem: groupCount(errors, (error) => error.system)
+    bySubject,
+    bySystem
   };
 }
 
