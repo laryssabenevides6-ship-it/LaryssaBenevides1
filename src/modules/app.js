@@ -416,6 +416,7 @@ function renderSchedule(d) {
 function scheduleDayPanel(day) {
   const outsideStudies = (state.outsideStudies || []).filter((study) => study.date === day.date);
   const totalItems = [day.medcofClass, day.stepClass].filter(Boolean).length + outsideStudies.length;
+  const hasChecklistWork = !isWeekendFreeDay(day) || outsideStudies.length > 0 || ["questions", "anki", "errors"].some((key) => day.tasks?.[key]);
   return `<article class="schedule-day-panel ${day.status === "Atrasado" ? "late" : ""}">
     <header class="schedule-day-header">
       <div>
@@ -433,13 +434,21 @@ function scheduleDayPanel(day) {
       ${outsideStudies.map(outsideStudyScheduleCard).join("")}
       ${totalItems ? "" : empty("Dia livre no cronograma.")}
     </div>
-    <footer class="schedule-day-footer">
+    ${
+      hasChecklistWork
+        ? `<footer class="schedule-day-footer">
       ${scheduleFooterTask(day, "questions", "Questoes")}
       ${scheduleFooterTask(day, "anki", "Anki")}
       ${scheduleFooterTask(day, "errors", "Revisao de erros")}
       <button class="secondary-button details-button" data-open-day="${day.id}">Detalhes de hoje</button>
-    </footer>
+    </footer>`
+        : ""
+    }
   </article>`;
+}
+
+function isWeekendFreeDay(day) {
+  return /sabado|sábado|domingo/i.test(day.weekday || "") && !day.medcofClass && !day.stepClass;
 }
 
 function scheduleFooterTask(day, key, label) {

@@ -303,7 +303,7 @@ function buildAlerts(state, now, overdueDays, openErrors, weekQuestions) {
 }
 
 function isFreeDay(day) {
-  return /domingo/i.test(day.weekday || "") && !day.medcofClass && !day.stepClass;
+  return /sabado|sábado|domingo/i.test(day.weekday || "") && !day.medcofClass && !day.stepClass;
 }
 
 function cleanText(value = "") {
