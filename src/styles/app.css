@@ -1573,6 +1573,183 @@ th {
   white-space: normal;
 }
 
+.schedule-week-list {
+  display: grid;
+  gap: 18px;
+}
+
+.schedule-day-panel {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.schedule-day-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface-2) 34%, var(--surface));
+}
+
+.schedule-day-header h3 {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+
+.schedule-day-header span,
+.schedule-day-footer small,
+.lesson-side small,
+.lesson-main small {
+  color: var(--muted);
+}
+
+.schedule-day-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.schedule-day-meta b {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: 12px;
+}
+
+.schedule-lesson-list {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.schedule-lesson-card {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.schedule-lesson-card.done {
+  border-color: color-mix(in srgb, var(--brand) 32%, var(--line));
+}
+
+.lesson-check {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin-top: 4px;
+}
+
+.lesson-check input {
+  position: absolute;
+  opacity: 0;
+}
+
+.lesson-check span,
+.outside-check {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--brand);
+  font-weight: 900;
+}
+
+.lesson-check input:checked + span {
+  border-color: var(--brand);
+}
+
+.lesson-check input:checked + span::after {
+  content: "OK";
+  font-size: 9px;
+}
+
+.lesson-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lesson-title-row strong {
+  line-height: 1.2;
+}
+
+.lesson-title-row em {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.lesson-main p {
+  margin: 6px 0 0;
+  color: var(--muted);
+}
+
+.lesson-side {
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+  min-width: 110px;
+}
+
+.lesson-side span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.schedule-day-footer {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.schedule-day-footer > div {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.schedule-day-footer small,
+.schedule-day-footer strong {
+  display: block;
+}
+
+.outside-schedule-card {
+  background: color-mix(in srgb, var(--brand) 7%, var(--surface));
+}
+
 .schedule-shell {
   display: grid;
   grid-template-columns: 315px minmax(0, 1fr);
@@ -1672,8 +1849,18 @@ th {
   .task-checklist,
   .modal-study-timers,
   .daily-detail-grid,
+  .schedule-day-footer,
   .quick-actions,
   .inline-alerts {
     grid-template-columns: 1fr;
+  }
+
+  .schedule-lesson-card {
+    grid-template-columns: 26px minmax(0, 1fr);
+  }
+
+  .lesson-side {
+    grid-column: 2;
+    justify-items: start;
   }
 }

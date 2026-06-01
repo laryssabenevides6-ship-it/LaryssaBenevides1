@@ -373,29 +373,95 @@ function renderSchedule(d) {
       </section>
       <section class="panel">
         <div class="section-title"><h2>${weekRangeTitle(selectedScheduleWeek, weekItems)}</h2><span>${weekItems.length} dia(s)</span></div>
-        <div class="table-wrap">
-          <table class="schedule-table">
-            <thead><tr>${["Data", "Aula MEDCOF", "Aula B&B", "Questoes", "Anki", "Revisao de erros", "Status MEDCOF", "Status B&B", "Status Questoes", "Status Anki", "Status Revisao", "Status geral", "Detalhes"].map((h) => `<th>${h}</th>`).join("")}</tr></thead>
-            <tbody>${weekItems.map(scheduleRow).join("") || `<tr><td colspan="13">${empty("Nenhum dia nesta semana.")}</td></tr>`}</tbody>
-          </table>
-        </div>
+        <div class="schedule-week-list">${weekItems.map(scheduleDayPanel).join("") || empty("Nenhum dia nesta semana.")}</div>
       </section>
     </div>
   </div>`;
 }
 
-function scheduleRow(day) {
-  return `<tr class="${day.status === "Atrasado" ? "late-row" : ""}">
-    <td>${fmtDate(day.date)}</td>
-    <td>${day.medcofClass || "-"}</td>
-    <td>${day.stepClass || "-"}</td>
-    <td>${day.plannedQuestions || "25 questoes"}</td>
-    <td>Anki: ${taskStatus(day, "anki")}</td>
-    <td>${day.errorReview || "Revisar erros"}</td>
-    ${["medcof", "step", "questions", "anki", "errors"].map((key) => `<td>${taskStatus(day, key)}</td>`).join("")}
-    <td><span class="status-pill ${statusClass(day.status)}">${day.status}</span></td>
-    <td><button class="secondary-button details-button" data-open-day="${day.id}">Detalhes de hoje</button></td>
-  </tr>`;
+function scheduleDayPanel(day) {
+  const outsideStudies = (state.outsideStudies || []).filter((study) => study.date === day.date);
+  const totalItems = [day.medcofClass, day.stepClass].filter(Boolean).length + outsideStudies.length;
+  return `<article class="schedule-day-panel ${day.status === "Atrasado" ? "late" : ""}">
+    <header class="schedule-day-header">
+      <div>
+        <h3>${scheduleDayTitle(day)}</h3>
+        <span>${weekTitle(day.week, groupScheduleByWeek(state.schedule))}</span>
+      </div>
+      <div class="schedule-day-meta">
+        <span class="status-pill ${statusClass(day.status)}">${day.status}</span>
+        <b>${totalItems} aula(s)</b>
+      </div>
+    </header>
+    <div class="schedule-lesson-list">
+      ${scheduleLessonCard(day, "medcof", "MEDCOF", day.area || "MEDCOF", day.medcofClass, day.medcofPriority || day.monthlyPriority)}
+      ${scheduleLessonCard(day, "step", "B&B / Step 1", day.stepSystem || "Step 1", day.stepClass, "Step 1")}
+      ${outsideStudies.map(outsideStudyScheduleCard).join("")}
+      ${totalItems ? "" : empty("Dia livre no cronograma.")}
+    </div>
+    <footer class="schedule-day-footer">
+      <div>
+        <small>Questoes</small>
+        <strong>${taskStatus(day, "questions")}</strong>
+      </div>
+      <div>
+        <small>Anki</small>
+        <strong>${taskStatus(day, "anki")}</strong>
+      </div>
+      <div>
+        <small>Revisao de erros</small>
+        <strong>${taskStatus(day, "errors")}</strong>
+      </div>
+      <button class="secondary-button details-button" data-open-day="${day.id}">Detalhes de hoje</button>
+    </footer>
+  </article>`;
+}
+
+function scheduleLessonCard(day, key, source, subject, title, priority) {
+  if (!title) return "";
+  const done = Boolean(day.tasks?.[key]);
+  return `<article class="schedule-lesson-card ${done ? "done" : ""}">
+    <label class="lesson-check" title="Marcar ${source}">
+      <input type="checkbox" data-day-id="${day.id}" data-task="${key}" ${done ? "checked" : ""} />
+      <span></span>
+    </label>
+    <div class="lesson-main">
+      <div class="lesson-title-row">
+        <strong>${subject}</strong>
+        ${priority ? `<em>${priority}</em>` : ""}
+      </div>
+      <p>${title}</p>
+      ${studyTimerControls(day, key)}
+    </div>
+    <div class="lesson-side">
+      <span>${source}</span>
+      <small>${done ? "Feito" : "Pendente"}</small>
+    </div>
+  </article>`;
+}
+
+function outsideStudyScheduleCard(study) {
+  return `<article class="schedule-lesson-card outside-schedule-card done">
+    <div class="outside-check">+</div>
+    <div class="lesson-main">
+      <div class="lesson-title-row">
+        <strong>${study.subject || "Estudo fora do cronograma"}</strong>
+        <em>Fora do cronograma</em>
+      </div>
+      <p>${study.lesson || study.topic || "Estudo registrado"}</p>
+      ${study.system || study.topic ? `<small>${[study.system, study.topic].filter(Boolean).join(" - ")}</small>` : ""}
+      ${study.notes ? `<small>${study.notes}</small>` : ""}
+    </div>
+    <div class="lesson-side">
+      <span>${study.minutes || 0} min</span>
+      <small>Registrado</small>
+    </div>
+  </article>`;
+}
+
+function scheduleDayTitle(day) {
+  const weekday = day.weekday ? `${capitalize(day.weekday)} - ` : "";
+  return `${weekday}${fmtDate(day.date)}`;
 }
 
 function groupScheduleByWeek(items) {
@@ -753,7 +819,10 @@ function handleSimulationSubmit(event) {
 
 function handleOutsideStudySubmit(event) {
   event.preventDefault();
-  state = addOutsideStudy(state, Object.fromEntries(new FormData(event.currentTarget)));
+  const data = Object.fromEntries(new FormData(event.currentTarget));
+  state = addOutsideStudy(state, data);
+  const matchingDay = state.schedule.find((day) => day.date === data.date);
+  if (matchingDay?.week) selectedScheduleWeek = matchingDay.week;
   event.currentTarget.reset();
   persistRender();
 }
@@ -965,4 +1034,8 @@ function matches(day, q) {
 
 function escapeHtml(value) {
   return String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+}
+
+function capitalize(value = "") {
+  return String(value || "").charAt(0).toUpperCase() + String(value || "").slice(1);
 }
