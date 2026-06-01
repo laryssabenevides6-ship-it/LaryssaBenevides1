@@ -268,30 +268,64 @@ function renderToday(d) {
 
 function todayPlan(day, now) {
   if (!day) return `<section class="panel hero-plan">${empty("Nenhum dia encontrado no cronograma.")}</section>`;
+  const taskOrder = [
+    ["medcof", "Aula MEDCOF", day.medcofClass || "Sem aula MEDCOF"],
+    ["step", "Aula B&B / Step 1", day.stepClass || "Sem aula B&B"],
+    ["questions", "Questoes", day.plannedQuestions || "25 questoes"],
+    ["anki", "Anki", `Anki: ${day.tasks.anki ? "Feito" : "Pendente"}`],
+    ["errors", "Revisao de erros", day.errorReview || "Revisar erros abertos"]
+  ];
+  const pendingTasks = taskOrder.filter(([key]) => !day.tasks?.[key]);
+  const nextTask = pendingTasks[0]?.[1] || "Dia completo";
   return `<section class="panel hero-plan">
-    <div class="section-title"><h2>Hoje - Plano do dia</h2><span>${fmtDate(now)}</span></div>
-    <div class="plan-grid">
-      ${planTaskCard(day, "medcof", "Aula MEDCOF do dia", day.medcofClass || "Sem aula MEDCOF")}
-      ${planTaskCard(day, "step", "Aula B&B / Step 1 do dia", day.stepClass || "Sem aula B&B")}
-      ${planTaskCard(day, "questions", "Questoes planejadas", day.plannedQuestions || "25 questoes")}
-      ${planTaskCard(day, "anki", "Anki obrigatorio", `Anki: ${day.tasks.anki ? "Feito" : "Pendente"}`)}
-      ${planTaskCard(day, "errors", "Revisao/caderno de erros", day.errorReview || "Revisar erros abertos")}
-      <div><small>Tarefa minima</small><strong>${day.minimumTask || "Anki + aula principal + questoes"}</strong></div>
-      <div><small>Plano normal</small><strong>${day.normalPlan || "Aulas + questoes + caderno de erros"}</strong></div>
-      <div><small>Extra se der tempo</small><strong>${day.extraPlan || "Reforcar ponto fraco"}</strong></div>
-      <div><small>Status geral do dia</small><strong class="status-pill ${statusClass(day.status)}">${day.status}</strong></div>
+    <div class="today-hero-header">
+      <div>
+        <p class="eyebrow">Hoje - Plano do dia</p>
+        <h2>${fmtDate(now)}</h2>
+      </div>
+      <span class="status-pill ${statusClass(day.status)}">${day.status}</span>
+    </div>
+    <div class="today-summary-strip">
+      <div>
+        <small>Progresso do dia</small>
+        <strong>${taskCompletion(day)}%</strong>
+        <div class="today-progress"><i style="width:${taskCompletion(day)}%"></i></div>
+      </div>
+      <div>
+        <small>Proxima acao</small>
+        <strong>${nextTask}</strong>
+      </div>
+      <div>
+        <small>Faltam</small>
+        <strong>${pendingTasks.length} tarefa(s)</strong>
+      </div>
+    </div>
+    <div class="today-execution-layout">
+      <div class="today-main-list">
+        <div class="section-title compact-title"><h2>Fazer hoje</h2><span>marque conforme concluir</span></div>
+        ${taskOrder.map(([key, label, value], index) => planTaskCard(day, key, label, value, index + 1)).join("")}
+      </div>
+      <aside class="today-guide">
+        <div><small>Tarefa minima</small><strong>${day.minimumTask || "Anki + aula principal + questoes"}</strong></div>
+        <div><small>Plano normal</small><strong>${day.normalPlan || "Aulas + questoes + caderno de erros"}</strong></div>
+        <div><small>Extra se der tempo</small><strong>${day.extraPlan || "Reforcar ponto fraco"}</strong></div>
+      </aside>
     </div>
   </section>`;
 }
 
-function planTaskCard(day, key, label, value) {
+function planTaskCard(day, key, label, value, index = 1) {
   return `<div class="plan-task-card ${day.tasks?.[key] ? "done" : ""}">
+    <div class="task-number">${index}</div>
     <label class="card-check" title="Marcar ${label}">
       <input type="checkbox" data-day-id="${day.id}" data-task="${key}" ${day.tasks?.[key] ? "checked" : ""} />
       <span></span>
     </label>
-    <small>${label}</small>
-    <strong>${value}</strong>
+    <div class="task-copy">
+      <small>${label}</small>
+      <strong>${value}</strong>
+      <em>${day.tasks?.[key] ? "Feito" : "Pendente"}</em>
+    </div>
     ${studyTimerControls(day, key)}
   </div>`;
 }

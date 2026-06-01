@@ -1191,6 +1191,8 @@ th {
   .error-metrics,
   .compact-metrics,
   .today-layout,
+  .today-summary-strip,
+  .today-execution-layout,
   .dashboard-grid,
   .questions-hero,
   .questions-layout,
@@ -1255,6 +1257,10 @@ th {
   .quick-result {
     grid-template-columns: 1fr;
   }
+
+  .plan-task-card {
+    grid-template-columns: 30px minmax(0, 1fr) 36px;
+  }
 }
 
 .auth-shell {
@@ -1310,6 +1316,90 @@ th {
   border-color: color-mix(in srgb, var(--brand) 34%, var(--line));
 }
 
+.today-hero-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.today-hero-header h2 {
+  font-size: 24px;
+}
+
+.today-summary-strip {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr 0.7fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.today-summary-strip > div {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.today-summary-strip small,
+.today-guide small,
+.task-copy small {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--muted);
+}
+
+.today-summary-strip strong {
+  display: block;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.today-progress {
+  height: 7px;
+  margin-top: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.today-progress i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--brand), var(--brand-2));
+}
+
+.today-execution-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.75fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.today-main-list {
+  display: grid;
+  gap: 10px;
+}
+
+.today-guide {
+  display: grid;
+  gap: 10px;
+}
+
+.today-guide > div {
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-2) 68%, var(--surface));
+}
+
+.today-guide strong {
+  display: block;
+  line-height: 1.35;
+}
+
 .plan-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1326,19 +1416,33 @@ th {
 
 .plan-task-card {
   position: relative;
-  padding-right: 58px !important;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 42px;
+  gap: 12px;
+  align-items: start;
+  padding-right: 13px !important;
 }
 
 .plan-task-card.done {
   border-color: color-mix(in srgb, var(--brand) 42%, var(--line));
 }
 
-.card-check {
-  position: absolute;
-  right: 14px;
-  top: 14px;
+.task-number {
   display: grid;
   place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.card-check {
+  display: grid;
+  place-items: center;
+  width: 34px;
 }
 
 .card-check input {
@@ -1380,7 +1484,30 @@ th {
   line-height: 1.35;
 }
 
+.task-copy strong {
+  display: block;
+  line-height: 1.35;
+}
+
+.task-copy em {
+  display: inline-flex;
+  margin-top: 8px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.plan-task-card.done .task-copy em {
+  background: color-mix(in srgb, var(--brand) 18%, var(--surface));
+  color: var(--brand);
+}
+
 .study-timer {
+  grid-column: 2 / -1;
   display: grid;
   gap: 9px;
   margin-top: 12px;
