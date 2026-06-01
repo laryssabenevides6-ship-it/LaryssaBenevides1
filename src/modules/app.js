@@ -400,21 +400,24 @@ function scheduleDayPanel(day) {
       ${totalItems ? "" : empty("Dia livre no cronograma.")}
     </div>
     <footer class="schedule-day-footer">
-      <div>
-        <small>Questoes</small>
-        <strong>${taskStatus(day, "questions")}</strong>
-      </div>
-      <div>
-        <small>Anki</small>
-        <strong>${taskStatus(day, "anki")}</strong>
-      </div>
-      <div>
-        <small>Revisao de erros</small>
-        <strong>${taskStatus(day, "errors")}</strong>
-      </div>
+      ${scheduleFooterTask(day, "questions", "Questoes")}
+      ${scheduleFooterTask(day, "anki", "Anki")}
+      ${scheduleFooterTask(day, "errors", "Revisao de erros")}
       <button class="secondary-button details-button" data-open-day="${day.id}">Detalhes de hoje</button>
     </footer>
   </article>`;
+}
+
+function scheduleFooterTask(day, key, label) {
+  const done = Boolean(day.tasks?.[key]);
+  return `<label class="schedule-footer-task ${done ? "done" : ""}">
+    <input type="checkbox" data-day-id="${day.id}" data-task="${key}" ${done ? "checked" : ""} />
+    <span></span>
+    <div>
+      <small>${label}</small>
+      <strong>${done ? "Feito" : "Pendente"}</strong>
+    </div>
+  </label>`;
 }
 
 function scheduleLessonCard(day, key, source, subject, title, priority) {

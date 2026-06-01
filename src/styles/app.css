@@ -1734,11 +1734,47 @@ th {
   border-top: 1px solid var(--line);
 }
 
-.schedule-day-footer > div {
+.schedule-footer-task {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface-2);
+  cursor: pointer;
+}
+
+.schedule-footer-task.done {
+  border-color: color-mix(in srgb, var(--brand) 34%, var(--line));
+}
+
+.schedule-footer-task input {
+  position: absolute;
+  opacity: 0;
+}
+
+.schedule-footer-task span {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+}
+
+.schedule-footer-task input:checked + span {
+  border-color: var(--brand);
+  background: var(--brand);
+}
+
+.schedule-footer-task input:checked + span::after {
+  content: "OK";
+  color: #061016;
+  font-size: 9px;
+  font-weight: 900;
 }
 
 .schedule-day-footer small,
