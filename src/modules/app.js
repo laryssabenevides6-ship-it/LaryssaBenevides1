@@ -697,6 +697,7 @@ function bindView() {
   );
   $("#questionsForm")?.addEventListener("input", updateQuestionCalculatedFields);
   $("#questionsForm")?.addEventListener("submit", handleQuestionsSubmit);
+  document.querySelectorAll("[data-multi-field] input").forEach((input) => input.addEventListener("change", () => updateMultiSummary(input.closest("[data-multi-field]"))));
   $("#simulationForm")?.addEventListener("submit", handleSimulationSubmit);
   $("#outsideStudyForm")?.addEventListener("submit", handleOutsideStudySubmit);
   $("#errorForm")?.addEventListener("submit", handleErrorSubmit);
@@ -981,12 +982,13 @@ function fieldSelect(name, label, options, required = true, value = "") {
 
 function fieldMultiSelect(name, label, options, required = true, value = "") {
   const selected = splitLabels(value);
-  return `<fieldset class="field multi-field" data-multi-field="${name}">
-    <legend>${label}</legend>
-    <div class="multi-options">${options
+  const summary = selected.length ? `${selected.length} selecionada(s)` : "Selecionar";
+  return `<details class="field multi-field" data-multi-field="${name}">
+    <summary><span>${label}</span><strong data-multi-summary>${summary}</strong></summary>
+    <div class="multi-options" role="group" aria-label="${label}">${options
       .map((option) => `<label><input type="checkbox" name="${name}" value="${option}" ${selected.includes(option) ? "checked" : ""} /><span>${option}</span></label>`)
       .join("")}</div>
-  </fieldset>`;
+  </details>`;
 }
 
 function formToObject(form) {
@@ -997,6 +999,13 @@ function formToObject(form) {
     data[name] = formData.getAll(name).map((item) => String(item).trim()).filter(Boolean).join(", ");
   });
   return data;
+}
+
+function updateMultiSummary(field) {
+  if (!field) return;
+  const count = field.querySelectorAll("input:checked").length;
+  const summary = field.querySelector("[data-multi-summary]");
+  if (summary) summary.textContent = count ? `${count} selecionada(s)` : "Selecionar";
 }
 
 function splitLabels(value = "") {
