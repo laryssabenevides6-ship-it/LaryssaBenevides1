@@ -315,7 +315,7 @@ function timerTitle(day, taskKey) {
 
 export function taskCompletion(day) {
   const keys = lessonTaskKeys(day);
-  if (!keys.length) return day.status === "Livre" ? 100 : 0;
+  if (!keys.length) return 0;
   return pct(keys.filter((key) => day.tasks?.[key]).length, keys.length);
 }
 

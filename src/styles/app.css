@@ -1635,6 +1635,17 @@ th {
   opacity: 0.92;
 }
 
+.schedule-lesson-card.remapped,
+.schedule-footer-task.remapped {
+  border-style: dashed;
+  opacity: 0.86;
+}
+
+.schedule-lesson-card.remapped .lesson-check,
+.schedule-footer-task.remapped input {
+  cursor: not-allowed;
+}
+
 .task-number {
   display: grid;
   place-items: center;

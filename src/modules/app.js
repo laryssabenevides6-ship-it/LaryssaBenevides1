@@ -589,8 +589,9 @@ function scheduleFooterTask(day, key, label) {
   if (key === "questions") return scheduleQuestionReminder(day);
   const done = Boolean(day.tasks?.[key]);
   const remappedDate = day.remappedTasks?.[key];
-  return `<label class="schedule-footer-task ${done ? "done" : ""}">
-    <input type="checkbox" data-day-id="${day.id}" data-task="${key}" ${done ? "checked" : ""} />
+  const isRemappedPending = Boolean(remappedDate && !done);
+  return `<label class="schedule-footer-task ${done ? "done" : ""} ${isRemappedPending ? "remapped" : ""}">
+    <input type="checkbox" data-day-id="${day.id}" data-task="${key}" ${done ? "checked" : ""} ${isRemappedPending ? "disabled" : ""} />
     <span></span>
     <div>
       <small>${label}</small>
@@ -633,9 +634,10 @@ function scheduleLessonCard(day, key, source, subject, title, priority) {
   if (!title) return "";
   const done = Boolean(day.tasks?.[key]);
   const remappedDate = day.remappedTasks?.[key];
-  return `<article class="schedule-lesson-card ${done ? "done" : ""}">
+  const isRemappedPending = Boolean(remappedDate && !done);
+  return `<article class="schedule-lesson-card ${done ? "done" : ""} ${isRemappedPending ? "remapped" : ""}">
     <label class="lesson-check" title="Marcar ${source}">
-      <input type="checkbox" data-day-id="${day.id}" data-task="${key}" ${done ? "checked" : ""} />
+      <input type="checkbox" data-day-id="${day.id}" data-task="${key}" ${done ? "checked" : ""} ${isRemappedPending ? "disabled" : ""} />
       <span></span>
     </label>
     <div class="lesson-main">
