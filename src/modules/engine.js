@@ -23,6 +23,7 @@ export function setTask(state, dayId, taskKey, done, now = todayISO()) {
   const day = state.schedule.find((item) => item.id === dayId);
   if (!day || !TASKS.some(([key]) => key === taskKey)) return state;
   day.tasks[taskKey] = Boolean(done);
+  if (done && day.remappedTasks?.[taskKey]) delete day.remappedTasks[taskKey];
   day.status = dayStatus(day, now);
   day.completedAt = day.status === "Feito" ? new Date().toISOString() : "";
   return runAutomations(state, now);

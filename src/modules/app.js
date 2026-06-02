@@ -402,7 +402,7 @@ function overdueItems(now = todayISO()) {
     .filter((day) => day.date < now && !["Feito", "Livre"].includes(day.status))
     .flatMap((day) =>
       Object.entries(taskLabels)
-        .filter(([key]) => !day.tasks?.[key] && overdueTaskExists(day, key))
+        .filter(([key]) => !day.tasks?.[key] && !day.remappedTasks?.[key] && overdueTaskExists(day, key))
         .map(([key, label]) => ({
           id: `${day.id}:${key}`,
           kind: "task",
@@ -515,12 +515,13 @@ function isWeekendFreeDay(day) {
 
 function scheduleFooterTask(day, key, label) {
   const done = Boolean(day.tasks?.[key]);
+  const remappedDate = day.remappedTasks?.[key];
   return `<label class="schedule-footer-task ${done ? "done" : ""}">
     <input type="checkbox" data-day-id="${day.id}" data-task="${key}" ${done ? "checked" : ""} />
     <span></span>
     <div>
       <small>${label}</small>
-      <strong>${done ? "Feito" : "Pendente"}</strong>
+      <strong>${done ? "Feito" : remappedDate ? `Remanejado para ${fmtDate(remappedDate)}` : "Pendente"}</strong>
     </div>
   </label>`;
 }
@@ -528,6 +529,7 @@ function scheduleFooterTask(day, key, label) {
 function scheduleLessonCard(day, key, source, subject, title, priority) {
   if (!title) return "";
   const done = Boolean(day.tasks?.[key]);
+  const remappedDate = day.remappedTasks?.[key];
   return `<article class="schedule-lesson-card ${done ? "done" : ""}">
     <label class="lesson-check" title="Marcar ${source}">
       <input type="checkbox" data-day-id="${day.id}" data-task="${key}" ${done ? "checked" : ""} />
@@ -542,7 +544,7 @@ function scheduleLessonCard(day, key, source, subject, title, priority) {
     </div>
     <div class="lesson-side">
       <span>${source}</span>
-      <small>${done ? "Feito" : "Pendente"}</small>
+      <small>${done ? "Feito" : remappedDate ? `Remanejado para ${fmtDate(remappedDate)}` : "Pendente"}</small>
     </div>
   </article>`;
 }
@@ -997,7 +999,8 @@ function handleOverdueReschedule(event) {
     const taskKey = form.dataset.taskKey;
     if (day && taskKey) {
       state = addOutsideStudy(state, rescheduledPayload(day, taskKey, targetDate));
-      state = setTask(state, day.id, taskKey, true);
+      day.remappedTasks ||= {};
+      day.remappedTasks[taskKey] = targetDate;
     }
   }
   const matchingDay = state.schedule.find((day) => day.date === targetDate);
