@@ -357,20 +357,22 @@ function requiredTaskKeys(day, state = null) {
 function isTaskRemapped(state, day, key) {
   if (!day || !key) return false;
   if (day.remappedTasks?.[key]) return true;
-  return Boolean(state?.outsideStudies?.some((study) => study.sourceTaskKey === key && remappedStudySourceDay(state, study)?.id === day.id));
+  return Boolean(state?.outsideStudies?.some((study) => remappedStudySourceKey(state, study) === key && remappedStudySourceDay(state, study)?.id === day.id));
 }
 
 function syncRemappedOutsideStudies(state) {
   const linked = new Map();
   const unlinked = [];
   (state.outsideStudies || []).forEach((study) => {
-    if (!study.sourceTaskKey) {
+    const sourceKey = remappedStudySourceKey(state, study);
+    if (!sourceKey) {
       unlinked.push(study);
       return;
     }
+    study.sourceTaskKey = sourceKey;
     const day = remappedStudySourceDay(state, study);
     if (day) study.sourceDayId = day.id;
-    const key = day ? `${day.id}:${study.sourceTaskKey}` : `${study.sourceTaskKey}:${cleanKey(study.lesson)}`;
+    const key = day ? `${day.id}:${sourceKey}` : `${sourceKey}:${cleanKey(study.lesson)}`;
     const current = linked.get(key);
     if (!current || studyTimestamp(study) >= studyTimestamp(current)) linked.set(key, study);
   });
@@ -378,7 +380,7 @@ function syncRemappedOutsideStudies(state) {
   state.schedule.forEach((day) => {
     day.remappedTasks ||= {};
     Object.keys(day.remappedTasks).forEach((key) => {
-      const hasLinkedStudy = state.outsideStudies.some((study) => study.sourceTaskKey === key && remappedStudySourceDay(state, study)?.id === day.id);
+      const hasLinkedStudy = state.outsideStudies.some((study) => remappedStudySourceKey(state, study) === key && remappedStudySourceDay(state, study)?.id === day.id);
       if (!hasLinkedStudy) delete day.remappedTasks[key];
     });
   });
@@ -398,12 +400,28 @@ function syncRemappedOutsideStudies(state) {
 }
 
 function remappedStudySourceDay(state, study) {
-  if (!study?.sourceTaskKey) return null;
   const direct = state.schedule?.find((day) => day.id === study.sourceDayId);
   if (direct) return direct;
+  const sourceKey = remappedStudySourceKey(state, study);
+  if (!sourceKey) return null;
   const lessonKey = cleanKey(study.lesson);
   if (!lessonKey) return null;
-  return state.schedule?.find((day) => cleanKey(sourceTaskTitle(day, study.sourceTaskKey)) === lessonKey) || null;
+  return state.schedule?.find((day) => cleanKey(sourceTaskTitle(day, sourceKey)) === lessonKey) || null;
+}
+
+function remappedStudySourceKey(state, study) {
+  if (study?.sourceTaskKey) return study.sourceTaskKey;
+  if (!looksLikeLegacyRemap(study)) return "";
+  const lessonKey = cleanKey(study.lesson);
+  if (!lessonKey) return "";
+  const match = state.schedule?.find((day) => cleanKey(day.medcofClass) === lessonKey || cleanKey(day.stepClass) === lessonKey);
+  if (!match) return "";
+  return cleanKey(match.medcofClass) === lessonKey ? "medcof" : "step";
+}
+
+function looksLikeLegacyRemap(study) {
+  const marker = cleanKey([study.topic, study.notes, study.subject, study.system].filter(Boolean).join(" "));
+  return marker.includes("remanejad") || marker.includes("remarcad");
 }
 
 function sourceTaskTitle(day, key) {
