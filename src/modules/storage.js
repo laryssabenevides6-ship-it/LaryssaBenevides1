@@ -201,7 +201,8 @@ function normalizeOutsideStudy(study) {
     lesson: study.lesson || "",
     notes: study.notes || "",
     minutes: Number(study.minutes) || 0,
-    done: study.done ?? (study.sourceTaskKey ? false : true),
+    done: study.manualCompleted ? Boolean(study.done) : study.sourceTaskKey ? false : study.done ?? true,
+    manualCompleted: Boolean(study.manualCompleted),
     completedAt: study.completedAt || "",
     sourceDayId: study.sourceDayId || "",
     sourceTaskKey: study.sourceTaskKey || ""

@@ -1228,7 +1228,7 @@ function handleOverdueReschedule(event) {
     if (day && taskKey) {
       const existing = (state.outsideStudies || []).find((study) => study.sourceTaskKey === taskKey && remappedStudySourceDay(study)?.id === day.id);
       if (existing) {
-        Object.assign(existing, rescheduledPayload(day, taskKey, targetDate), { id: existing.id, createdAt: new Date().toISOString(), completedAt: "" });
+        Object.assign(existing, rescheduledPayload(day, taskKey, targetDate), { id: existing.id, createdAt: new Date().toISOString(), completedAt: "", manualCompleted: false });
       } else {
         state = addOutsideStudy(state, rescheduledPayload(day, taskKey, targetDate));
       }

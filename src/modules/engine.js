@@ -135,6 +135,7 @@ export function addOutsideStudy(state, payload) {
     notes: payload.notes || "",
     minutes,
     done: Boolean(payload.done),
+    manualCompleted: Boolean(payload.manualCompleted),
     sourceDayId: payload.sourceDayId || "",
     sourceTaskKey: payload.sourceTaskKey || ""
   });
@@ -150,6 +151,7 @@ export function setOutsideStudyDone(state, studyId, done) {
   const study = (state.outsideStudies || []).find((item) => item.id === studyId);
   if (!study) return state;
   study.done = Boolean(done);
+  study.manualCompleted = Boolean(done);
   study.completedAt = study.done ? new Date().toISOString() : "";
   if (study.sourceDayId && study.sourceTaskKey) {
     const day = state.schedule.find((item) => item.id === study.sourceDayId);
@@ -384,6 +386,10 @@ function syncRemappedOutsideStudies(state) {
     const day = remappedStudySourceDay(state, study);
     if (!day || !study.sourceTaskKey) return;
     study.sourceDayId = day.id;
+    if (["medcof", "step"].includes(study.sourceTaskKey) && !study.manualCompleted) {
+      study.done = false;
+      study.completedAt = "";
+    }
     day.remappedTasks ||= {};
     day.remappedTasks[study.sourceTaskKey] = study.date;
     day.tasks ||= {};
