@@ -617,7 +617,7 @@ function errorForm(error = null, formId = "errorForm") {
   <form id="${formId}" class="form">
     ${isEdit ? `<input type="hidden" name="id" value="${error.id}" />` : ""}
     <label class="field"><span>Data</span><input name="date" type="date" value="${error?.date || todayISO()}" required /></label>
-    ${fieldSelect("subject", "Materia", SUBJECT_OPTIONS, true, error?.subject)}
+    ${fieldMultiSelect("subject", "Materia", SUBJECT_OPTIONS, true, error?.subject)}
     ${fieldMultiSelect("system", "Sistemas", SYSTEM_OPTIONS, true, error?.system)}
     ${fieldInput("topic", "Tema", "Tema especifico", "text", false, "", error?.topic)}
     <label class="field full-field"><span>Pergunta de revisao</span><textarea name="reviewQuestion" placeholder="Transforme o erro em uma pergunta para revisar depois." required>${escapeHtml(error?.reviewQuestion || "")}</textarea></label>
