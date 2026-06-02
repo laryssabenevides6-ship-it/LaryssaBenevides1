@@ -8,6 +8,7 @@ import {
   getDerived,
   runAutomations,
   saveWeeklyBoard,
+  setOutsideStudyDone,
   setTask,
   taskCompletion,
   updateError,
@@ -458,8 +459,12 @@ function scheduleLessonCard(day, key, source, subject, title, priority) {
 }
 
 function outsideStudyScheduleCard(study) {
-  return `<article class="schedule-lesson-card outside-schedule-card done">
-    <div class="outside-check">+</div>
+  const done = Boolean(study.done);
+  return `<article class="schedule-lesson-card outside-schedule-card ${done ? "done" : ""}">
+    <label class="lesson-check" title="Marcar estudo fora do cronograma">
+      <input type="checkbox" data-outside-study-id="${study.id}" ${done ? "checked" : ""} />
+      <span></span>
+    </label>
     <div class="lesson-main">
       <div class="lesson-title-row">
         <strong>${study.subject || "Estudo fora do cronograma"}</strong>
@@ -470,7 +475,7 @@ function outsideStudyScheduleCard(study) {
     </div>
     <div class="lesson-side">
       <span>Extra</span>
-      <small>Registrado</small>
+      <small>${done ? "Feito" : "Pendente"}</small>
     </div>
   </article>`;
 }
@@ -691,6 +696,12 @@ function bindView() {
   document.querySelectorAll("[data-task]").forEach((input) =>
     input.addEventListener("change", () => {
       state = setTask(state, input.dataset.dayId, input.dataset.task, input.checked);
+      persistRender();
+    })
+  );
+  document.querySelectorAll("[data-outside-study-id]").forEach((input) =>
+    input.addEventListener("change", () => {
+      state = setOutsideStudyDone(state, input.dataset.outsideStudyId, input.checked);
       persistRender();
     })
   );

@@ -132,13 +132,22 @@ export function addOutsideStudy(state, payload) {
     topic: payload.topic || "",
     lesson: payload.lesson || "",
     notes: payload.notes || "",
-    minutes
+    minutes,
+    done: Boolean(payload.done)
   });
   return state;
 }
 
 export function removeOutsideStudy(state, studyId) {
   state.outsideStudies = (state.outsideStudies || []).filter((study) => study.id !== studyId);
+  return state;
+}
+
+export function setOutsideStudyDone(state, studyId, done) {
+  const study = (state.outsideStudies || []).find((item) => item.id === studyId);
+  if (!study) return state;
+  study.done = Boolean(done);
+  study.completedAt = study.done ? new Date().toISOString() : "";
   return state;
 }
 

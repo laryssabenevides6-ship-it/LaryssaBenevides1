@@ -199,7 +199,9 @@ function normalizeOutsideStudy(study) {
     topic: study.topic || "",
     lesson: study.lesson || "",
     notes: study.notes || "",
-    minutes: Number(study.minutes) || 0
+    minutes: Number(study.minutes) || 0,
+    done: study.done ?? true,
+    completedAt: study.completedAt || ""
   };
 }
 
