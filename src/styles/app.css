@@ -241,6 +241,12 @@ h2 {
   color: var(--text);
 }
 
+#themeToggle {
+  width: auto;
+  min-width: 72px;
+  padding: 0 12px;
+}
+
 .full {
   width: 100%;
 }
@@ -1163,6 +1169,18 @@ th {
 .backup-actions {
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.theme-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.theme-options .active {
+  border-color: color-mix(in srgb, var(--brand) 55%, var(--line));
+  background: color-mix(in srgb, var(--brand) 18%, var(--surface-2));
+  color: var(--brand);
 }
 
 .empty {

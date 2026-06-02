@@ -182,12 +182,24 @@ function handleAuthSubmit(event) {
 function bindShell() {
   $("#themeToggle").addEventListener("click", () => {
     state.preferences.theme = state.preferences.theme === "dark" ? "light" : "dark";
-    document.body.dataset.theme = state.preferences.theme;
+    applyTheme();
     persistRender();
   });
+  applyTheme();
   $("#globalSearch").addEventListener("input", render);
   $("#userMini").textContent = user.name;
   $("#userMini").nextElementSibling.textContent = "usuario conectado";
+}
+
+function applyTheme() {
+  const theme = state.preferences.theme === "light" ? "light" : "dark";
+  state.preferences.theme = theme;
+  document.body.dataset.theme = theme;
+  const toggle = $("#themeToggle");
+  if (toggle) {
+    toggle.textContent = theme === "light" ? "Escuro" : "Claro";
+    toggle.title = theme === "light" ? "Alternar para modo escuro" : "Alternar para modo claro";
+  }
 }
 
 function renderNav() {
@@ -658,6 +670,13 @@ function renderSettings() {
       <button class="danger-button full" data-action="logout">Logout</button>
     </section>
     <section class="panel">
+      <div class="section-title"><h2>Aparencia</h2><span>tema do app</span></div>
+      <div class="theme-options">
+        <button class="secondary-button ${state.preferences.theme === "light" ? "active" : ""}" data-action="set-theme" data-theme-value="light" type="button">Modo claro</button>
+        <button class="secondary-button ${state.preferences.theme === "dark" ? "active" : ""}" data-action="set-theme" data-theme-value="dark" type="button">Modo escuro</button>
+      </div>
+    </section>
+    <section class="panel">
       <div class="section-title"><h2>Backup</h2><span>dados do usuario atual</span></div>
       <div class="backup-actions">
         <button class="secondary-button" data-action="export">Exportar JSON</button>
@@ -781,6 +800,10 @@ function handleAction(event) {
   if (action === "mark-anki" || action === "toggle-anki") {
     const day = state.schedule.find((item) => item.id === event.currentTarget.dataset.dayId);
     state = setTask(state, event.currentTarget.dataset.dayId, "anki", !day?.tasks?.anki);
+  }
+  if (action === "set-theme") {
+    state.preferences.theme = event.currentTarget.dataset.themeValue === "light" ? "light" : "dark";
+    applyTheme();
   }
   if (action === "toggle-errors") showAllErrors = !showAllErrors;
   if (action === "remove-outside") state.outsideStudies = (state.outsideStudies || []).filter((study) => study.id !== event.currentTarget.dataset.studyId);
