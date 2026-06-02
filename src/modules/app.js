@@ -264,7 +264,7 @@ function todayPlan(day, now) {
     { key: "questions", label: "Questões recomendadas hoje", value: day.plannedQuestions || "Meta: 30 questões", reminder: true },
     { key: "anki", label: "Anki", value: `Anki: ${day.tasks.anki ? "Feito" : "Pendente"}`, required: true },
     { key: "errors", label: "Revisão do Caderno de Erros", value: errorReviewShortText(now), required: reviewCounts.total > 0, reminder: reviewCounts.total === 0 }
-  ].filter((item) => !["medcof", "step"].includes(item.key) || !day.remappedTasks?.[item.key]);
+  ].filter((item) => !["medcof", "step"].includes(item.key) || !isTaskRemapped(day, item.key));
   const pendingTasks = taskOrder.filter((item) => item.required && !day.tasks?.[item.key]);
   const nextTask = pendingTasks[0]?.label || "Tudo feito";
   return `<section class="panel hero-plan">
@@ -278,8 +278,8 @@ function todayPlan(day, now) {
     <div class="today-summary-strip">
       <div>
         <small>Progresso do dia</small>
-        <strong>${taskCompletion(day)}%</strong>
-        <div class="today-progress"><i style="width:${taskCompletion(day)}%"></i></div>
+        <strong>${taskCompletion(day, state)}%</strong>
+        <div class="today-progress"><i style="width:${taskCompletion(day, state)}%"></i></div>
       </div>
       <div>
         <small>Proxima tarefa</small>
@@ -405,7 +405,7 @@ function weekDayCard(day) {
     <div><strong>${dayLabel(day)}</strong><span class="status-pill ${statusClass(day.status)}">${day.status}</span></div>
     <p><b>MEDCOF:</b> ${day.medcofClass || "-"}</p>
     <p><b>B&B:</b> ${day.stepClass || "-"}</p>
-    <small>${day.plannedQuestions || "Questoes planejadas"} · Anki ${day.tasks.anki ? "feito" : "pendente"} · ${taskCompletion(day)}%</small>
+    <small>${day.plannedQuestions || "Questoes planejadas"} · Anki ${day.tasks.anki ? "feito" : "pendente"} · ${taskCompletion(day, state)}%</small>
   </article>`;
 }
 
@@ -549,8 +549,8 @@ function scheduleDayPanel(day) {
   const outsideStudies = (state.outsideStudies || []).filter((study) => study.date === day.date);
   const reviewCount = errorReviewCountForDate(day.date);
   const scheduledLessonCount = [
-    day.medcofClass && !day.remappedTasks?.medcof,
-    day.stepClass && !day.remappedTasks?.step
+    day.medcofClass && !isTaskRemapped(day, "medcof"),
+    day.stepClass && !isTaskRemapped(day, "step")
   ].filter(Boolean).length;
   const totalItems = scheduledLessonCount + outsideStudies.length;
   const hasChecklistWork = !isWeekendFreeDay(day) || outsideStudies.length > 0 || ["questions", "anki", "errors"].some((key) => day.tasks?.[key]);
@@ -587,6 +587,12 @@ function scheduleDayPanel(day) {
 
 function isWeekendFreeDay(day) {
   return /sabado|sábado|domingo/i.test(day.weekday || "") && !day.medcofClass && !day.stepClass;
+}
+
+function isTaskRemapped(day, key) {
+  if (!day || !key) return false;
+  if (day.remappedTasks?.[key]) return true;
+  return Boolean((state.outsideStudies || []).some((study) => study.sourceDayId === day.id && study.sourceTaskKey === key));
 }
 
 function scheduleFooterTask(day, key, label) {
@@ -638,7 +644,7 @@ function scheduleLessonCard(day, key, source, subject, title, priority) {
   if (!title) return "";
   const done = Boolean(day.tasks?.[key]);
   const remappedDate = day.remappedTasks?.[key];
-  if (remappedDate) return "";
+  if (isTaskRemapped(day, key)) return "";
   const isRemappedPending = Boolean(remappedDate && !done);
   return `<article class="schedule-lesson-card ${done ? "done" : ""} ${isRemappedPending ? "remapped" : ""}">
     <label class="lesson-check" title="Marcar ${source}">
@@ -954,8 +960,8 @@ function openDayModal(dayId) {
   const day = state.schedule.find((item) => item.id === dayId);
   if (!day) return;
   const hasErrorReview = errorReviewCountForDate(day.date) || day.tasks?.errors;
-  const medcofDetail = day.remappedTasks?.medcof ? "" : dailyDetailCard(day, "medcof", "Aula MEDCOF", day.medcofClass || "Sem aula MEDCOF");
-  const stepDetail = day.remappedTasks?.step ? "" : dailyDetailCard(day, "step", "Aula B&B / Step 1", day.stepClass || "Sem aula B&B");
+  const medcofDetail = isTaskRemapped(day, "medcof") ? "" : dailyDetailCard(day, "medcof", "Aula MEDCOF", day.medcofClass || "Sem aula MEDCOF");
+  const stepDetail = isTaskRemapped(day, "step") ? "" : dailyDetailCard(day, "step", "Aula B&B / Step 1", day.stepClass || "Sem aula B&B");
   $("#modalContent").innerHTML = `<div class="modal-day">
     <div class="modal-day-header">
       <div>
@@ -965,8 +971,8 @@ function openDayModal(dayId) {
       <span class="status-pill ${statusClass(day.status)}">${day.status}</span>
     </div>
     <div class="day-progress-card">
-      <div><span>Progresso do dia</span><strong>${taskCompletion(day)}%</strong></div>
-      <div class="day-progress-bar"><i style="width:${taskCompletion(day)}%"></i></div>
+      <div><span>Progresso do dia</span><strong>${taskCompletion(day, state)}%</strong></div>
+      <div class="day-progress-bar"><i style="width:${taskCompletion(day, state)}%"></i></div>
     </div>
     <div class="daily-detail-grid">
       ${medcofDetail}

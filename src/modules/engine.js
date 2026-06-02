@@ -299,7 +299,7 @@ export function getDerived(state, now = todayISO()) {
     systemPerformance: summarizeAccuracy(state.sessions, "system"),
     questionsBySource: groupCount(state.sessions, (item) => item.source),
     statusCounts: groupCount(schedule, (item) => item.status),
-    weekProgress: weekDays.map((day) => ({ label: dayLabel(day), value: taskCompletion(day) })),
+    weekProgress: weekDays.map((day) => ({ label: dayLabel(day), value: taskCompletion(day, state) })),
     errorSummary: summarizeErrors(state.errors, now)
   };
 }
@@ -311,8 +311,8 @@ function timerTitle(day, taskKey) {
   return "Estudo do cronograma";
 }
 
-export function taskCompletion(day) {
-  const keys = lessonTaskKeys(day).filter((key) => !day.remappedTasks?.[key]);
+export function taskCompletion(day, state = null) {
+  const keys = lessonTaskKeys(day).filter((key) => !isTaskRemapped(state, day, key));
   if (!keys.length) return 0;
   return pct(keys.filter((key) => day.tasks?.[key]).length, keys.length);
 }
@@ -344,11 +344,17 @@ export function dayStatus(day, now = todayISO(), state = null) {
 
 function requiredTaskKeys(day, state = null) {
   return [
-    day.medcofClass && !day.remappedTasks?.medcof ? "medcof" : "",
-    day.stepClass && !day.remappedTasks?.step ? "step" : "",
+    day.medcofClass && !isTaskRemapped(state, day, "medcof") ? "medcof" : "",
+    day.stepClass && !isTaskRemapped(state, day, "step") ? "step" : "",
     "anki",
     hasErrorReviewOnDate(state, day.date) || day.tasks?.errors ? "errors" : ""
   ].filter(Boolean);
+}
+
+function isTaskRemapped(state, day, key) {
+  if (!day || !key) return false;
+  if (day.remappedTasks?.[key]) return true;
+  return Boolean(state?.outsideStudies?.some((study) => study.sourceDayId === day.id && study.sourceTaskKey === key));
 }
 
 function hasErrorReviewOnDate(state, date) {
