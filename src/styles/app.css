@@ -1895,7 +1895,7 @@ th {
 
 .schedule-day-panel {
   overflow: hidden;
-  border: 1px solid var(--line);
+  border: 1px solid color-mix(in srgb, var(--brand-2) 28%, var(--line));
   border-radius: 8px;
   background: var(--surface);
 }
@@ -1905,21 +1905,37 @@ th {
   align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
-  padding: 16px;
-  border-bottom: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface-2) 34%, var(--surface));
+  padding: 18px 20px;
+  border-bottom: 1px solid color-mix(in srgb, var(--brand) 24%, var(--line));
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--brand-2) 56%, var(--surface-2)), color-mix(in srgb, var(--brand) 13%, var(--surface-2))),
+    var(--surface-2);
+  box-shadow: inset 5px 0 0 var(--brand);
 }
 
 .schedule-day-header h3 {
   margin: 0 0 4px;
-  font-size: 18px;
+  color: #fff;
+  font-size: 22px;
+  line-height: 1.12;
 }
 
-.schedule-day-header span,
 .schedule-day-footer small,
 .lesson-side small,
 .lesson-main small {
   color: var(--muted);
+}
+
+.schedule-day-header span {
+  display: inline-flex;
+  margin-top: 6px;
+  padding: 4px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 13px;
+  font-weight: 900;
 }
 
 .schedule-day-meta {
@@ -1934,10 +1950,17 @@ th {
   display: inline-flex;
   align-items: center;
   min-height: 26px;
-  padding: 4px 8px;
+  padding: 5px 10px;
   border-radius: 999px;
-  background: var(--surface-2);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
   font-size: 12px;
+}
+
+body[data-theme="light"] .schedule-day-header {
+  background:
+    linear-gradient(90deg, var(--brand-2), color-mix(in srgb, var(--brand) 38%, #fff)),
+    var(--brand-2);
 }
 
 .schedule-lesson-list {
