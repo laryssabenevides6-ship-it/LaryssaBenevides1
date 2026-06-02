@@ -70,7 +70,7 @@ const ERROR_TYPE_OPTIONS = [
   "Tempo",
   "Chute"
 ];
-const ERROR_STATUS_OPTIONS = ["Aberto", "Em revisao", "Resolvido", "Recorrente"];
+const ERROR_STATUS_OPTIONS = ["Aberto", "Revisado", "Resolvido", "Recorrente"];
 
 let seed = [];
 let state;
@@ -246,8 +246,8 @@ function renderToday(d) {
     ${todayPlan(day, d.now)}
     ${overduePanel("Atrasados", overdue)}
     <section class="panel">
-      <div class="section-title"><h2>Erros para revisar hoje</h2><span>${d.errorSummary.dueToday.length}</span></div>
-      ${todayErrorReviews(d.errorSummary.dueToday)}
+      <div class="section-title"><h2>Revisão do Caderno de Erros</h2><span>${d.errorSummary.pendingReview}</span></div>
+      ${errorReviewSummaryCard(d.now)}
     </section>
     <section class="panel">
       <div class="section-title"><h2>Alertas</h2><span>prioridade do dia</span></div>
@@ -257,15 +257,16 @@ function renderToday(d) {
 
 function todayPlan(day, now) {
   if (!day) return `<section class="panel hero-plan">${empty("Nenhum dia encontrado no cronograma.")}</section>`;
+  const reviewCounts = errorReviewCounts(now);
   const taskOrder = [
-    ["medcof", "Aula MEDCOF", day.medcofClass || "Sem aula MEDCOF"],
-    ["step", "Aula B&B / Step 1", day.stepClass || "Sem aula B&B"],
-    ["questions", "Questoes", day.plannedQuestions || "25 questoes"],
-    ["anki", "Anki", `Anki: ${day.tasks.anki ? "Feito" : "Pendente"}`],
-    ["errors", "Revisao de erros", day.errorReview || "Revisar erros abertos"]
+    { key: "medcof", label: "Aula MEDCOF", value: day.medcofClass || "Sem aula MEDCOF", required: Boolean(day.medcofClass) },
+    { key: "step", label: "Aula B&B / Step 1", value: day.stepClass || "Sem aula B&B", required: Boolean(day.stepClass) },
+    { key: "questions", label: "Questões recomendadas hoje", value: day.plannedQuestions || "Meta: 30 questões", reminder: true },
+    { key: "anki", label: "Anki", value: `Anki: ${day.tasks.anki ? "Feito" : "Pendente"}`, required: true },
+    { key: "errors", label: "Revisão do Caderno de Erros", value: errorReviewShortText(now), required: reviewCounts.total > 0, reminder: reviewCounts.total === 0 }
   ];
-  const pendingTasks = taskOrder.filter(([key]) => !day.tasks?.[key]);
-  const nextTask = pendingTasks[0]?.[1] || "Tudo feito";
+  const pendingTasks = taskOrder.filter((item) => item.required && !day.tasks?.[item.key]);
+  const nextTask = pendingTasks[0]?.label || "Tudo feito";
   return `<section class="panel hero-plan">
     <div class="today-hero-header">
       <div>
@@ -292,10 +293,21 @@ function todayPlan(day, now) {
     <div class="today-execution-layout">
       <div class="today-main-list">
         <div class="section-title compact-title"><h2>Fazer hoje</h2><span>marque conforme concluir</span></div>
-        ${taskOrder.map(([key, label, value], index) => planTaskCard(day, key, label, value, index + 1)).join("")}
+        ${taskOrder.map((item, index) => item.reminder ? reminderTaskCard(item, index + 1) : planTaskCard(day, item.key, item.label, item.value, index + 1)).join("")}
       </div>
     </div>
   </section>`;
+}
+
+function reminderTaskCard(item, index = 1) {
+  return `<div class="plan-task-card reminder">
+    <div class="task-number">${index}</div>
+    <div class="task-copy">
+      <small>${item.label}</small>
+      <strong>${item.value}</strong>
+      <em>Lembrete</em>
+    </div>
+  </div>`;
 }
 
 function planTaskCard(day, key, label, value, index = 1) {
@@ -325,6 +337,43 @@ function todayErrorReviews(items = []) {
       )
       .join("") || empty("Nenhum erro para revisar hoje.")
   }</div>`;
+}
+
+function dueErrorReviewItems(date = todayISO(), exact = false) {
+  const today = todayISO();
+  return (state.errors || [])
+    .filter((error) => {
+      if (!error.reviewDate || error.status === "Resolvido") return false;
+      if (exact || date > today) return error.reviewDate === date;
+      return error.reviewDate <= date;
+    })
+    .sort((a, b) => a.reviewDate.localeCompare(b.reviewDate));
+}
+
+function errorReviewCounts(now = todayISO(), exact = false) {
+  const items = dueErrorReviewItems(now, exact);
+  return {
+    today: items.filter((error) => error.reviewDate === now).length,
+    overdue: items.filter((error) => error.reviewDate < now).length,
+    total: items.length
+  };
+}
+
+function errorReviewShortText(now = todayISO()) {
+  const counts = errorReviewCounts(now);
+  return counts.total ? `${counts.total} questão(ões) para revisar` : "Sem revisão vencida";
+}
+
+function errorReviewSummaryCard(now = todayISO()) {
+  const counts = errorReviewCounts(now);
+  return `<article class="review-summary-card">
+    <div class="review-summary-grid">
+      <div><small>Hoje</small><strong>${counts.today}</strong></div>
+      <div><small>Atrasadas</small><strong>${counts.overdue}</strong></div>
+      <div><small>Total pendente</small><strong>${counts.total}</strong></div>
+    </div>
+    <button class="primary-button" data-action="open-error-review-queue" type="button" ${counts.total ? "" : "disabled"}>Revisar agora</button>
+  </article>`;
 }
 
 function syncStudyTimerTicker() {
@@ -394,7 +443,6 @@ function overdueItems(now = todayISO()) {
   const taskLabels = {
     medcof: "Aula MEDCOF",
     step: "Aula B&B / Step 1",
-    questions: "Questoes",
     anki: "Anki",
     errors: "Revisao de erros"
   };
@@ -425,7 +473,18 @@ function overdueItems(now = todayISO()) {
       title: study.lesson || study.topic || study.subject || "Estudo fora do cronograma",
       meta: `${fmtDate(study.date)}${study.subject ? ` - ${study.subject}` : ""}`
     }));
-  return [...scheduled, ...extras].sort((a, b) => a.date.localeCompare(b.date));
+  const overdueErrorReviews = dueErrorReviewItems(addDays(now, -1));
+  const errorReview = overdueErrorReviews.length
+    ? [{
+        id: "error-review-overdue",
+        kind: "error-review",
+        date: overdueErrorReviews[0].reviewDate,
+        label: "Caderno de Erros",
+        title: "Revisão do Caderno de Erros",
+        meta: `${overdueErrorReviews.length} questão(ões) atrasada(s)`
+      }]
+    : [];
+  return [...scheduled, ...extras, ...errorReview].sort((a, b) => a.date.localeCompare(b.date));
 }
 
 function overdueTaskExists(day, key) {
@@ -454,6 +513,17 @@ function overduePanel(title, items) {
 
 function overdueCard(item) {
   const target = addDays(todayISO(), 1);
+  if (item.kind === "error-review") {
+    return `<article class="overdue-card">
+      <div class="task-number">!</div>
+      <div>
+        <small>${fmtDate(item.date)} - ${item.label}</small>
+        <strong>${item.title}</strong>
+        <em>${item.meta}</em>
+      </div>
+      <button class="primary-button mini-button" data-action="open-error-review-queue" type="button">Revisar agora</button>
+    </article>`;
+  }
   const checkAttrs =
     item.kind === "outside"
       ? `data-outside-study-id="${item.studyId}"`
@@ -477,6 +547,7 @@ function overdueCard(item) {
 
 function scheduleDayPanel(day) {
   const outsideStudies = (state.outsideStudies || []).filter((study) => study.date === day.date);
+  const reviewCount = errorReviewCountForDate(day.date);
   const totalItems = [day.medcofClass, day.stepClass].filter(Boolean).length + outsideStudies.length;
   const hasChecklistWork = !isWeekendFreeDay(day) || outsideStudies.length > 0 || ["questions", "anki", "errors"].some((key) => day.tasks?.[key]);
   return `<article class="schedule-day-panel ${day.status === "Atrasado" ? "late" : ""}">
@@ -493,6 +564,7 @@ function scheduleDayPanel(day) {
     <div class="schedule-lesson-list">
       ${scheduleLessonCard(day, "medcof", "MEDCOF", day.area || "MEDCOF", day.medcofClass, day.medcofPriority || day.monthlyPriority)}
       ${scheduleLessonCard(day, "step", "B&B / Step 1", day.stepSystem || "Step 1", day.stepClass, "Step 1")}
+      ${reviewCount ? scheduleErrorReviewCard(day.date, reviewCount) : ""}
       ${outsideStudies.map(outsideStudyScheduleCard).join("")}
       ${totalItems ? "" : empty("Dia livre no cronograma.")}
     </div>
@@ -501,7 +573,7 @@ function scheduleDayPanel(day) {
         ? `<footer class="schedule-day-footer">
       ${scheduleFooterTask(day, "questions", "Questoes")}
       ${scheduleFooterTask(day, "anki", "Anki")}
-      ${scheduleFooterTask(day, "errors", "Revisao de erros")}
+      ${errorReviewCountForDate(day.date) || day.tasks?.errors ? scheduleFooterTask(day, "errors", "Revisao de erros") : ""}
       <button class="secondary-button details-button" data-open-day="${day.id}">Detalhes de hoje</button>
     </footer>`
         : ""
@@ -514,6 +586,7 @@ function isWeekendFreeDay(day) {
 }
 
 function scheduleFooterTask(day, key, label) {
+  if (key === "questions") return scheduleQuestionReminder(day);
   const done = Boolean(day.tasks?.[key]);
   const remappedDate = day.remappedTasks?.[key];
   return `<label class="schedule-footer-task ${done ? "done" : ""}">
@@ -524,6 +597,36 @@ function scheduleFooterTask(day, key, label) {
       <strong>${done ? "Feito" : remappedDate ? `Remanejado para ${fmtDate(remappedDate)}` : "Pendente"}</strong>
     </div>
   </label>`;
+}
+
+function scheduleQuestionReminder(day) {
+  return `<article class="schedule-footer-task reminder">
+    <span></span>
+    <div>
+      <small>Questões recomendadas</small>
+      <strong>${day.plannedQuestions || "Meta de questões"}</strong>
+    </div>
+  </article>`;
+}
+
+function errorReviewCountForDate(date) {
+  return (state.errors || []).filter((error) => error.reviewDate === date && error.status !== "Resolvido").length;
+}
+
+function scheduleErrorReviewCard(date, count) {
+  return `<article class="schedule-lesson-card error-review-schedule-card">
+    <div class="task-number">!</div>
+    <div class="lesson-main">
+      <div class="lesson-title-row">
+        <strong>Revisão do Caderno de Erros</strong>
+        <em>Caderno de Erros</em>
+      </div>
+      <p>${count} questão(ões) programada(s) para revisão</p>
+    </div>
+    <div class="lesson-side">
+      <button class="secondary-button mini-button" data-action="open-error-review-queue" data-review-date="${date}" type="button">Revisar agora</button>
+    </div>
+  </article>`;
 }
 
 function scheduleLessonCard(day, key, source, subject, title, priority) {
@@ -739,9 +842,13 @@ function errorForm(error = null, formId = "errorForm") {
 
 function renderDashboard(d) {
   return `<div class="grid metrics">
-      ${metric("Progresso", `${d.progress}%`, "dias feitos")}
+      ${lessonProgressMetric(d.lessonProgress)}
       ${metric("Questoes", d.totalQuestions, "total")}
       ${metric("Acertos", `${d.accuracy}%`, "geral")}
+      ${metric("Hoje", d.todayQuestions, "questoes feitas")}
+      ${metric("Semana", d.weekQuestions, "questoes feitas")}
+      ${metric("Mes", d.monthQuestions, "questoes feitas")}
+      ${metric("Erros", d.questionErrors, "em questoes")}
     </div>
     <div class="dashboard-grid">
       <section class="panel">${barList(d.weekProgress, "Execucao da semana")}</section>
@@ -752,6 +859,15 @@ function renderDashboard(d) {
       <section class="panel wide">${errorDashboard(d.errorSummary)}</section>
       <section class="panel">${simulationCompare()}</section>
     </div>`;
+}
+
+function lessonProgressMetric(progress = { done: 0, total: 0, percent: 0 }) {
+  return `<article class="metric lesson-progress-metric">
+    <span>Progresso do Cronograma</span>
+    <strong>${progress.percent}%</strong>
+    <small>${progress.done} / ${progress.total} aulas concluídas</small>
+    <div class="today-progress"><i style="width:${progress.percent}%"></i></div>
+  </article>`;
 }
 
 function renderSettings() {
@@ -830,6 +946,7 @@ function bindView() {
 function openDayModal(dayId) {
   const day = state.schedule.find((item) => item.id === dayId);
   if (!day) return;
+  const hasErrorReview = errorReviewCountForDate(day.date) || day.tasks?.errors;
   $("#modalContent").innerHTML = `<div class="modal-day">
     <div class="modal-day-header">
       <div>
@@ -845,9 +962,9 @@ function openDayModal(dayId) {
     <div class="daily-detail-grid">
       ${dailyDetailCard(day, "medcof", "Aula MEDCOF", day.medcofClass || "Sem aula MEDCOF")}
       ${dailyDetailCard(day, "step", "Aula B&B / Step 1", day.stepClass || "Sem aula B&B")}
-      ${dailyDetailCard(day, "questions", "Questoes", day.plannedQuestions || "25 questoes planejadas")}
+      ${dailyReminderCard("Questões recomendadas", day.plannedQuestions || "25 questoes planejadas")}
       ${dailyDetailCard(day, "anki", "Anki", `Anki: ${day.tasks?.anki ? "Feito" : "Pendente"}`)}
-      ${dailyDetailCard(day, "errors", "Revisao de erros", day.errorReview || "Revisar erros abertos")}
+      ${hasErrorReview ? dailyDetailCard(day, "errors", "Revisao de erros", day.errorReview || "Revisar erros abertos") : dailyReminderCard("Revisão do Caderno de Erros", "Sem revisão programada")}
     </div>
   </div>`;
   if (!$("#modal").open) $("#modal").showModal();
@@ -874,6 +991,14 @@ function dailyDetailCard(day, key, title, content) {
   </article>`;
 }
 
+function dailyReminderCard(title, content) {
+  return `<article class="daily-detail-card reminder">
+    <strong>${title}</strong>
+    <p>${content}</p>
+    <span class="status-pill livre">Lembrete</span>
+  </article>`;
+}
+
 function handleAction(event) {
   const action = event.currentTarget.dataset.action;
   const modalDayId = event.currentTarget.closest("#modalContent") ? event.currentTarget.dataset.dayId || state.activeTimer?.dayId : "";
@@ -885,6 +1010,18 @@ function handleAction(event) {
   }
   if (action === "review-error") {
     openReviewErrorModal(event.currentTarget.dataset.errorId);
+    return;
+  }
+  if (action === "open-error-review-queue") {
+    openErrorReviewQueueModal(event.currentTarget.dataset.reviewDate || todayISO());
+    return;
+  }
+  if (action === "mark-error-reviewed") {
+    markErrorReviewed(event.currentTarget.dataset.errorId);
+    return;
+  }
+  if (action === "reschedule-error-review") {
+    rescheduleErrorReview(event.currentTarget.dataset.errorId);
     return;
   }
   if (action === "review-error-mastered") {
@@ -950,6 +1087,57 @@ function openReviewErrorModal(errorId) {
   $("#modalContent").querySelectorAll("[data-action]").forEach((button) => button.addEventListener("click", handleAction));
 }
 
+function openErrorReviewQueueModal(reviewDate = todayISO()) {
+  const exact = reviewDate > todayISO();
+  const items = dueErrorReviewItems(reviewDate, exact);
+  const counts = errorReviewCounts(reviewDate, exact);
+  $("#modalContent").innerHTML = `<div class="modal-day review-error-modal">
+    <div class="section-title"><h2>Revisão do Caderno de Erros</h2><span>${fmtDate(reviewDate)} · ${counts.total} pendente(s)</span></div>
+    <div class="review-summary-grid modal-review-summary">
+      <div><small>Hoje</small><strong>${counts.today}</strong></div>
+      <div><small>Atrasadas</small><strong>${counts.overdue}</strong></div>
+      <div><small>Total</small><strong>${counts.total}</strong></div>
+    </div>
+    <div class="record-list review-queue-list">${items.map(errorReviewQueueCard).join("") || empty("Nenhuma questão prevista para revisão agora.")}</div>
+  </div>`;
+  if (!$("#modal").open) $("#modal").showModal();
+  $("#modalContent").querySelectorAll("[data-action]").forEach((button) => button.addEventListener("click", handleAction));
+}
+
+function errorReviewQueueCard(error) {
+  return `<article class="task-card review-queue-card" data-review-card="${error.id}">
+    <div><strong>${error.topic || error.subject || "Sem tema"}</strong><span>${fmtDate(error.reviewDate)} - ${error.type || "Erro"}</span></div>
+    <p>${error.reviewQuestion || "Sem pergunta de revisão."}</p>
+    ${error.expectedAnswer ? `<small>Resposta esperada: ${error.expectedAnswer}</small>` : ""}
+    <label class="field full-field"><span>Observações adicionais</span><textarea data-review-notes placeholder="O que ficou claro ou ainda precisa revisar?">${escapeHtml(error.reviewNotes || "")}</textarea></label>
+    <div class="review-card-actions">
+      <label class="field"><span>Nova data de revisão</span><input data-review-date type="date" value="${addDays(todayISO(), 15)}" /></label>
+      <button class="primary-button mini-button" data-action="mark-error-reviewed" data-error-id="${error.id}" type="button">Marcar revisada</button>
+      <button class="secondary-button mini-button" data-action="reschedule-error-review" data-error-id="${error.id}" type="button">Reagendar</button>
+    </div>
+  </article>`;
+}
+
+function markErrorReviewed(errorId) {
+  const card = document.querySelector(`[data-review-card="${errorId}"]`);
+  const nextDate = card?.querySelector("[data-review-date]")?.value || addDays(todayISO(), 15);
+  const notes = card?.querySelector("[data-review-notes]")?.value || "";
+  state = updateError(state, errorId, { ...(state.errors.find((item) => item.id === errorId) || {}), status: "Revisado", reviewDate: nextDate, reviewNotes: notes });
+  saveState(user.id, state);
+  openErrorReviewQueueModal();
+  render();
+}
+
+function rescheduleErrorReview(errorId) {
+  const card = document.querySelector(`[data-review-card="${errorId}"]`);
+  const nextDate = card?.querySelector("[data-review-date]")?.value || addDays(todayISO(), 15);
+  const notes = card?.querySelector("[data-review-notes]")?.value || "";
+  state = updateError(state, errorId, { ...(state.errors.find((item) => item.id === errorId) || {}), status: "Revisado", reviewDate: nextDate, reviewNotes: notes });
+  saveState(user.id, state);
+  openErrorReviewQueueModal();
+  render();
+}
+
 function handleQuestionsSubmit(event) {
   event.preventDefault();
   const data = formToObject(event.currentTarget);
@@ -959,8 +1147,6 @@ function handleQuestionsSubmit(event) {
     selection: "Por assunto",
     format: "Bloco comum"
   });
-  const today = getDerived(state).today;
-  if (today?.date === todayISO()) state = setTask(state, today.id, "questions", true);
   event.currentTarget.reset();
   updateQuestionCalculatedFields({ currentTarget: event.currentTarget });
   persistRender();
@@ -1242,6 +1428,14 @@ function errorDashboard(summary) {
       ${metric("Recorrentes", summary.recurring, "repetidos")}
       ${metric("Revisão vencida", summary.overdue, "para revisar")}
     </div>
+    <article class="review-summary-card dashboard-review-summary">
+      <div class="review-summary-grid">
+        <div><small>Hoje</small><strong>${summary.scheduledToday}</strong></div>
+        <div><small>Atrasadas</small><strong>${summary.overdueReview}</strong></div>
+        <div><small>Total pendente</small><strong>${summary.pendingReview}</strong></div>
+      </div>
+      <button class="primary-button" data-action="open-error-review-queue" type="button" ${summary.pendingReview ? "" : "disabled"}>Revisar agora</button>
+    </article>
     ${errorsDueToday(summary.dueToday)}
     <div class="error-dashboard-grid">
       ${miniList(summary.topics, "Temas mais errados")}

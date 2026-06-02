@@ -337,6 +337,15 @@ h2 {
   font-size: 30px;
 }
 
+.lesson-progress-metric {
+  display: grid;
+  align-content: start;
+}
+
+.lesson-progress-metric .today-progress {
+  margin-top: 12px;
+}
+
 .today-layout,
 .dashboard-grid {
   display: grid;
@@ -1437,6 +1446,15 @@ th {
   .overdue-reschedule button {
     width: 100%;
   }
+
+  .review-summary-card,
+  .review-card-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .review-summary-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .auth-shell {
@@ -1609,6 +1627,12 @@ th {
 .plan-task-card.done {
   border-color: color-mix(in srgb, var(--brand-2) 34%, var(--line));
   background: color-mix(in srgb, var(--brand-2) 9%, var(--surface-2));
+}
+
+.plan-task-card.reminder {
+  grid-template-columns: 26px minmax(0, 1fr);
+  border-style: dashed;
+  opacity: 0.92;
 }
 
 .task-number {
@@ -1785,6 +1809,61 @@ th {
   padding: 6px 8px;
   background: var(--surface);
   color: var(--text);
+}
+
+.review-summary-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--brand-2) 28%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--brand-2) 8%, var(--surface));
+}
+
+.review-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.review-summary-grid div {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.review-summary-grid small,
+.review-summary-grid strong {
+  display: block;
+}
+
+.review-summary-grid small {
+  color: var(--muted);
+}
+
+.review-summary-grid strong {
+  margin-top: 3px;
+  font-size: 22px;
+}
+
+.modal-review-summary,
+.dashboard-review-summary {
+  margin-bottom: 14px;
+}
+
+.review-queue-card {
+  display: grid;
+  gap: 10px;
+}
+
+.review-card-actions {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto auto;
+  gap: 10px;
+  align-items: end;
 }
 
 .modal-study-timers {

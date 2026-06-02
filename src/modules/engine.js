@@ -8,12 +8,12 @@ export const TASKS = [
   ["errors", "Revisao de erros"]
 ];
 
-export const REQUIRED_TASKS = ["medcof", "step", "questions", "anki", "errors"];
+export const REQUIRED_TASKS = ["medcof", "step", "anki", "errors"];
 
 export function runAutomations(state, now = todayISO()) {
   state.schedule.forEach((day) => {
     day.tasks = { medcof: false, step: false, questions: false, anki: false, errors: false, ...(day.tasks || {}) };
-    day.status = dayStatus(day, now);
+    day.status = dayStatus(day, now, state);
     day.movedToBacklog = day.date < now && !["Feito", "Livre"].includes(day.status);
   });
   return state;
@@ -24,7 +24,7 @@ export function setTask(state, dayId, taskKey, done, now = todayISO()) {
   if (!day || !TASKS.some(([key]) => key === taskKey)) return state;
   day.tasks[taskKey] = Boolean(done);
   if (done && day.remappedTasks?.[taskKey]) delete day.remappedTasks[taskKey];
-  day.status = dayStatus(day, now);
+  day.status = dayStatus(day, now, state);
   day.completedAt = day.status === "Feito" ? new Date().toISOString() : "";
   return runAutomations(state, now);
 }
@@ -156,7 +156,7 @@ export function setOutsideStudyDone(state, studyId, done) {
     if (day && TASKS.some(([key]) => key === study.sourceTaskKey)) {
       day.tasks[study.sourceTaskKey] = study.done;
       if (study.done && day.remappedTasks?.[study.sourceTaskKey]) delete day.remappedTasks[study.sourceTaskKey];
-      day.status = dayStatus(day);
+      day.status = dayStatus(day, todayISO(), state);
     }
   }
   return state;
@@ -227,6 +227,7 @@ function errorPayload(payload) {
     summary: cleanText(payload.summary),
     reviewQuestion: cleanText(payload.reviewQuestion),
     expectedAnswer: cleanText(payload.expectedAnswer),
+    reviewNotes: cleanText(payload.reviewNotes),
     type: normalizeErrorType(payload.type),
     severity: payload.severity || "",
     reviewDate: payload.reviewDate || addDays(date, 7),
@@ -268,6 +269,9 @@ export function getDerived(state, now = todayISO()) {
   const openErrors = state.errors.filter((error) => error.status === "Aberto" || error.status === "Recorrente");
   const weekSessions = state.sessions.filter((item) => item.date >= addDays(now, -6) && item.date <= now);
   const weekQuestions = weekSessions.reduce((sum, item) => sum + item.questions, 0);
+  const todayQuestions = state.sessions.filter((item) => item.date === now).reduce((sum, item) => sum + item.questions, 0);
+  const monthPrefix = now.slice(0, 7);
+  const monthQuestions = state.sessions.filter((item) => item.date?.startsWith(monthPrefix)).reduce((sum, item) => sum + item.questions, 0);
   const overdueDays = schedule.filter((item) => item.movedToBacklog);
 
   return {
@@ -277,6 +281,7 @@ export function getDerived(state, now = todayISO()) {
     weekDays,
     overdueDays,
     completedDays,
+    lessonProgress: { ...lessonTotals, percent: pct(lessonTotals.done, lessonTotals.total) },
     progress: pct(lessonTotals.done, lessonTotals.total),
     totalQuestions,
     totalCorrect,
@@ -287,7 +292,10 @@ export function getDerived(state, now = todayISO()) {
     openErrors,
     outsideStudies,
     outsideHours: Math.round((outsideStudies.reduce((sum, item) => sum + item.minutes, 0) / 60) * 10) / 10,
+    todayQuestions,
     weekQuestions,
+    monthQuestions,
+    questionErrors: Math.max(0, totalQuestions - totalCorrect),
     alerts: buildAlerts(state, now, overdueDays, openErrors, weekQuestions),
     subjectPerformance: summarizeAccuracy(state.sessions, "subject"),
     systemPerformance: summarizeAccuracy(state.sessions, "system"),
@@ -326,13 +334,27 @@ export function taskStatus(day, key) {
   return day.tasks?.[key] ? "Feito" : "Pendente";
 }
 
-export function dayStatus(day, now = todayISO()) {
+export function dayStatus(day, now = todayISO(), state = null) {
   if (isFreeDay(day)) return "Livre";
-  const done = REQUIRED_TASKS.filter((key) => day.tasks?.[key]).length;
-  if (done === REQUIRED_TASKS.length) return "Feito";
+  const required = requiredTaskKeys(day, state);
+  const done = required.filter((key) => day.tasks?.[key]).length;
+  if (required.length && done === required.length) return "Feito";
   if (day.date < now) return "Atrasado";
   if (done > 0) return "Parcial";
   return "Pendente";
+}
+
+function requiredTaskKeys(day, state = null) {
+  return [
+    day.medcofClass ? "medcof" : "",
+    day.stepClass ? "step" : "",
+    "anki",
+    hasErrorReviewOnDate(state, day.date) || day.tasks?.errors ? "errors" : ""
+  ].filter(Boolean);
+}
+
+function hasErrorReviewOnDate(state, date) {
+  return Boolean(state?.errors?.some((error) => error.reviewDate === date && error.status !== "Resolvido"));
 }
 
 export function dayLabel(day) {
@@ -382,9 +404,9 @@ function normalizeErrorType(type = "") {
 }
 
 function normalizeErrorStatus(status = "") {
-  if (status === "Revisado") return "Em revisao";
+  if (status === "Em revisao") return "Revisado";
   if (status === "Fechado") return "Resolvido";
-  return ["Aberto", "Em revisao", "Resolvido", "Recorrente"].includes(status) ? status : "Aberto";
+  return ["Aberto", "Revisado", "Resolvido", "Recorrente"].includes(status) ? status : "Aberto";
 }
 
 function splitLabels(value = "") {
@@ -413,6 +435,8 @@ function summarizeErrors(errors = [], now = todayISO()) {
   const resolved = errors.filter((error) => error.status === "Resolvido");
   const recurring = errors.filter((error) => error.status === "Recorrente");
   const dueToday = errors.filter((error) => error.reviewDate && error.reviewDate <= now && error.status !== "Resolvido");
+  const scheduledToday = dueToday.filter((error) => error.reviewDate === now);
+  const overdueReview = dueToday.filter((error) => error.reviewDate < now);
   const topicCounts = groupCount(errors, (error) => error.topic || "Sem tema");
   const recurringTopics = topEntries(topicCounts, 20)
     .filter(([, value]) => value >= 3)
@@ -427,6 +451,9 @@ function summarizeErrors(errors = [], now = todayISO()) {
     resolved: resolved.length,
     recurring: Math.max(recurring.length, recurringTopics.length),
     overdue: dueToday.length,
+    scheduledToday: scheduledToday.length,
+    overdueReview: overdueReview.length,
+    pendingReview: dueToday.length,
     dueToday: dueToday
       .slice()
       .sort((a, b) => a.reviewDate.localeCompare(b.reviewDate))

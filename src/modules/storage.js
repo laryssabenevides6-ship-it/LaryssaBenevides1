@@ -224,7 +224,7 @@ function normalizeError(error) {
   };
   const errorTypes = ["Falta de conteudo", "Erro de interpretacao", "Tempo", "Chute"];
   const type = typeMigration[error.type] || error.type;
-  const status = error.status === "Revisado" ? "Em revisao" : error.status === "Fechado" ? "Resolvido" : error.status;
+  const status = error.status === "Em revisao" ? "Revisado" : error.status === "Fechado" ? "Resolvido" : error.status;
   return {
     id: error.id || `error-${Date.now().toString(36)}`,
     date: error.date || todayISO(),
@@ -236,10 +236,11 @@ function normalizeError(error) {
     summary: cleanText(error.summary || error.question),
     reviewQuestion: cleanText(error.reviewQuestion || error.question),
     expectedAnswer: cleanText(error.expectedAnswer),
+    reviewNotes: cleanText(error.reviewNotes),
     type: errorTypes.includes(type) ? type : "Falta de conteudo",
     severity: error.severity || "Media",
     reviewDate: error.reviewDate || "",
-    status: ["Aberto", "Em revisao", "Resolvido", "Recorrente"].includes(status) ? status : "Aberto",
+    status: ["Aberto", "Revisado", "Resolvido", "Recorrente"].includes(status) ? status : "Aberto",
     createdAt: error.createdAt || new Date().toISOString()
   };
 }
