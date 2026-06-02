@@ -134,7 +134,9 @@ export function addOutsideStudy(state, payload) {
     lesson: payload.lesson || "",
     notes: payload.notes || "",
     minutes,
-    done: Boolean(payload.done)
+    done: Boolean(payload.done),
+    sourceDayId: payload.sourceDayId || "",
+    sourceTaskKey: payload.sourceTaskKey || ""
   });
   return state;
 }
@@ -149,6 +151,14 @@ export function setOutsideStudyDone(state, studyId, done) {
   if (!study) return state;
   study.done = Boolean(done);
   study.completedAt = study.done ? new Date().toISOString() : "";
+  if (study.sourceDayId && study.sourceTaskKey) {
+    const day = state.schedule.find((item) => item.id === study.sourceDayId);
+    if (day && TASKS.some(([key]) => key === study.sourceTaskKey)) {
+      day.tasks[study.sourceTaskKey] = study.done;
+      if (study.done && day.remappedTasks?.[study.sourceTaskKey]) delete day.remappedTasks[study.sourceTaskKey];
+      day.status = dayStatus(day);
+    }
+  }
   return state;
 }
 
@@ -237,6 +247,15 @@ export function getDerived(state, now = todayISO()) {
   const week = today?.week || getWeekKey(now);
   const weekDays = schedule.filter((item) => item.week === week);
   const completedDays = schedule.filter((item) => item.status === "Feito");
+  const lessonTotals = schedule.reduce(
+    (acc, day) => {
+      const keys = lessonTaskKeys(day);
+      acc.total += keys.length;
+      acc.done += keys.filter((key) => day.tasks?.[key]).length;
+      return acc;
+    },
+    { total: 0, done: 0 }
+  );
   const totalQuestions = state.sessions.reduce((sum, item) => sum + item.questions, 0);
   const totalCorrect = state.sessions.reduce((sum, item) => sum + item.correct, 0);
   const outsideStudies = state.outsideStudies || [];
@@ -258,7 +277,7 @@ export function getDerived(state, now = todayISO()) {
     weekDays,
     overdueDays,
     completedDays,
-    progress: pct(completedDays.length, schedule.length),
+    progress: pct(lessonTotals.done, lessonTotals.total),
     totalQuestions,
     totalCorrect,
     accuracy: pct(totalCorrect, totalQuestions),
@@ -287,7 +306,16 @@ function timerTitle(day, taskKey) {
 }
 
 export function taskCompletion(day) {
-  return pct(REQUIRED_TASKS.filter((key) => day.tasks?.[key]).length, REQUIRED_TASKS.length);
+  const keys = lessonTaskKeys(day);
+  if (!keys.length) return day.status === "Livre" ? 100 : 0;
+  return pct(keys.filter((key) => day.tasks?.[key]).length, keys.length);
+}
+
+function lessonTaskKeys(day) {
+  return [
+    day.medcofClass ? "medcof" : "",
+    day.stepClass ? "step" : ""
+  ].filter(Boolean);
 }
 
 export function taskLabel(key) {

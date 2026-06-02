@@ -202,7 +202,9 @@ function normalizeOutsideStudy(study) {
     notes: study.notes || "",
     minutes: Number(study.minutes) || 0,
     done: study.done ?? true,
-    completedAt: study.completedAt || ""
+    completedAt: study.completedAt || "",
+    sourceDayId: study.sourceDayId || "",
+    sourceTaskKey: study.sourceTaskKey || ""
   };
 }
 

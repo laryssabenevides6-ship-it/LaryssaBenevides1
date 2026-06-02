@@ -1041,7 +1041,7 @@ function rescheduledPayload(day, taskKey, date) {
       lesson: day.errorReview || "Revisao de erros"
     }
   };
-  return { date, done: false, ...(payloads[taskKey] || payloads.questions) };
+  return { date, done: false, sourceDayId: day.id, sourceTaskKey: taskKey, ...(payloads[taskKey] || payloads.questions) };
 }
 
 function handleErrorSubmit(event) {
