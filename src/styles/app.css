@@ -1423,6 +1423,20 @@ th {
   .today-main-list {
     grid-template-columns: 1fr;
   }
+
+  .overdue-card {
+    grid-template-columns: 26px minmax(0, 1fr);
+  }
+
+  .overdue-reschedule {
+    grid-column: 1 / -1;
+    justify-content: stretch;
+  }
+
+  .overdue-reschedule input,
+  .overdue-reschedule button {
+    width: 100%;
+  }
 }
 
 .auth-shell {
@@ -1722,6 +1736,55 @@ th {
   min-height: 34px;
   padding: 7px 10px;
   font-size: 13px;
+}
+
+.overdue-panel {
+  border-color: color-mix(in srgb, var(--danger) 32%, var(--line));
+}
+
+.overdue-list {
+  display: grid;
+  gap: 8px;
+}
+
+.overdue-card {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) minmax(230px, auto);
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--danger) 24%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--danger) 5%, var(--surface));
+}
+
+.overdue-card small,
+.overdue-card em {
+  display: block;
+  color: var(--muted);
+  font-style: normal;
+}
+
+.overdue-card strong {
+  display: block;
+  margin: 2px 0;
+  line-height: 1.25;
+}
+
+.overdue-reschedule {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.overdue-reschedule input {
+  width: 140px;
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: var(--surface);
+  color: var(--text);
 }
 
 .modal-study-timers {

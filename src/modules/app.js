@@ -241,8 +241,10 @@ function render() {
 
 function renderToday(d) {
   const day = d.today;
+  const overdue = overdueItems(d.now);
   return `
     ${todayPlan(day, d.now)}
+    ${overduePanel("Atrasados", overdue)}
     <section class="panel">
       <div class="section-title"><h2>Erros para revisar hoje</h2><span>${d.errorSummary.dueToday.length}</span></div>
       ${todayErrorReviews(d.errorSummary.dueToday)}
@@ -364,12 +366,14 @@ function renderSchedule(d) {
   if (!selectedScheduleWeek || !weeks.some(([week]) => week === selectedScheduleWeek)) selectedScheduleWeek = weeks[0]?.[0] || d.week;
   const weekItems = weeks.find(([week]) => week === selectedScheduleWeek)?.[1] || [];
   const board = state.weeklyBoards?.[`schedule:${selectedScheduleWeek}`]?.content || "";
+  const overdue = overdueItems(d.now);
   return `<div class="schedule-shell">
     <aside class="week-sidebar panel">
       <div class="section-title"><h2>Semanas</h2><span>${weeks.length}</span></div>
       ${weeks.map(([week, items], index) => weekButton(week, items, index)).join("")}
     </aside>
     <div class="schedule-main">
+      ${overduePanel("Aulas e tarefas atrasadas", overdue)}
       <section class="panel weekly-board">
         <div class="section-title"><h2>Lousa semanal - ${weekTitle(selectedScheduleWeek, weeks)}</h2><span>autosave local</span></div>
         ${weeklyBoardGrid(selectedScheduleWeek, board)}
@@ -384,6 +388,91 @@ function renderSchedule(d) {
       </section>
     </div>
   </div>`;
+}
+
+function overdueItems(now = todayISO()) {
+  const taskLabels = {
+    medcof: "Aula MEDCOF",
+    step: "Aula B&B / Step 1",
+    questions: "Questoes",
+    anki: "Anki",
+    errors: "Revisao de erros"
+  };
+  const scheduled = state.schedule
+    .filter((day) => day.date < now && !["Feito", "Livre"].includes(day.status))
+    .flatMap((day) =>
+      Object.entries(taskLabels)
+        .filter(([key]) => !day.tasks?.[key] && overdueTaskExists(day, key))
+        .map(([key, label]) => ({
+          id: `${day.id}:${key}`,
+          kind: "task",
+          dayId: day.id,
+          taskKey: key,
+          date: day.date,
+          label,
+          title: overdueTaskTitle(day, key),
+          meta: scheduleDayTitle(day)
+        }))
+    );
+  const extras = (state.outsideStudies || [])
+    .filter((study) => study.date < now && !study.done)
+    .map((study) => ({
+      id: study.id,
+      kind: "outside",
+      studyId: study.id,
+      date: study.date,
+      label: "Fora do cronograma",
+      title: study.lesson || study.topic || study.subject || "Estudo fora do cronograma",
+      meta: `${fmtDate(study.date)}${study.subject ? ` - ${study.subject}` : ""}`
+    }));
+  return [...scheduled, ...extras].sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function overdueTaskExists(day, key) {
+  if (key === "medcof") return Boolean(day.medcofClass);
+  if (key === "step") return Boolean(day.stepClass);
+  return true;
+}
+
+function overdueTaskTitle(day, key) {
+  const map = {
+    medcof: day.medcofClass || "Aula MEDCOF",
+    step: day.stepClass || "Aula B&B / Step 1",
+    questions: day.plannedQuestions || "Bloco de questoes",
+    anki: "Anki obrigatorio",
+    errors: day.errorReview || "Revisao de erros"
+  };
+  return map[key] || key;
+}
+
+function overduePanel(title, items) {
+  return `<section class="panel overdue-panel">
+    <div class="section-title"><h2>${title}</h2><span>${items.length} pendencia(s)</span></div>
+    <div class="overdue-list">${items.map(overdueCard).join("") || empty("Nenhuma pendencia atrasada.")}</div>
+  </section>`;
+}
+
+function overdueCard(item) {
+  const target = addDays(todayISO(), 1);
+  const checkAttrs =
+    item.kind === "outside"
+      ? `data-outside-study-id="${item.studyId}"`
+      : `data-day-id="${item.dayId}" data-task="${item.taskKey}"`;
+  return `<article class="overdue-card">
+    <label class="lesson-check" title="Marcar como feito">
+      <input type="checkbox" ${checkAttrs} />
+      <span></span>
+    </label>
+    <div>
+      <small>${fmtDate(item.date)} - ${item.label}</small>
+      <strong>${item.title}</strong>
+      <em>${item.meta}</em>
+    </div>
+    <form class="overdue-reschedule" data-overdue-reschedule data-kind="${item.kind}" data-day-id="${item.dayId || ""}" data-task-key="${item.taskKey || ""}" data-study-id="${item.studyId || ""}">
+      <input name="date" type="date" value="${target}" min="${todayISO()}" aria-label="Nova data" />
+      <button class="secondary-button mini-button" type="submit">Remanejar</button>
+    </form>
+  </article>`;
 }
 
 function scheduleDayPanel(day) {
@@ -719,6 +808,7 @@ function bindView() {
     })
   );
   document.querySelectorAll("[data-action]").forEach((button) => button.addEventListener("click", handleAction));
+  document.querySelectorAll("form[data-overdue-reschedule]").forEach((form) => form.addEventListener("submit", handleOverdueReschedule));
   document.querySelectorAll("[data-board-cell]").forEach((cell) =>
     cell.addEventListener("input", () => {
       state = saveWeeklyBoard(state, `schedule:${selectedScheduleWeek}`, serializeBoardFromDOM());
@@ -889,6 +979,66 @@ function handleOutsideStudySubmit(event) {
   if (matchingDay?.week) selectedScheduleWeek = matchingDay.week;
   event.currentTarget.reset();
   persistRender();
+}
+
+function handleOverdueReschedule(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const targetDate = new FormData(form).get("date") || todayISO();
+  if (form.dataset.kind === "outside") {
+    const study = (state.outsideStudies || []).find((item) => item.id === form.dataset.studyId);
+    if (study) {
+      study.date = targetDate;
+      study.done = false;
+      study.completedAt = "";
+    }
+  } else {
+    const day = state.schedule.find((item) => item.id === form.dataset.dayId);
+    const taskKey = form.dataset.taskKey;
+    if (day && taskKey) {
+      state = addOutsideStudy(state, rescheduledPayload(day, taskKey, targetDate));
+      state = setTask(state, day.id, taskKey, true);
+    }
+  }
+  const matchingDay = state.schedule.find((day) => day.date === targetDate);
+  if (matchingDay?.week) selectedScheduleWeek = matchingDay.week;
+  persistRender();
+}
+
+function rescheduledPayload(day, taskKey, date) {
+  const payloads = {
+    medcof: {
+      subject: day.area || "MEDCOF",
+      system: day.medcofPriority || day.monthlyPriority || "",
+      topic: "Aula remanejada",
+      lesson: day.medcofClass || "Aula MEDCOF"
+    },
+    step: {
+      subject: day.stepSystem || "Step 1",
+      system: "B&B / Step 1",
+      topic: "Aula remanejada",
+      lesson: day.stepClass || "Aula B&B / Step 1"
+    },
+    questions: {
+      subject: day.area || day.stepSystem || "Questoes",
+      system: "",
+      topic: "Questoes remanejadas",
+      lesson: day.plannedQuestions || "Bloco de questoes"
+    },
+    anki: {
+      subject: "Anki",
+      system: "",
+      topic: "Anki remanejado",
+      lesson: "Anki obrigatorio"
+    },
+    errors: {
+      subject: "Caderno de Erros",
+      system: "",
+      topic: "Revisao remanejada",
+      lesson: day.errorReview || "Revisao de erros"
+    }
+  };
+  return { date, done: false, ...(payloads[taskKey] || payloads.questions) };
 }
 
 function handleErrorSubmit(event) {
