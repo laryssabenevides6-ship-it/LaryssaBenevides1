@@ -217,8 +217,8 @@ function renderNav() {
 }
 
 function persistRender() {
-  saveState(user.id, state);
   render();
+  saveState(user.id, state);
 }
 
 function render() {
@@ -450,7 +450,7 @@ function overdueItems(now = todayISO()) {
     .filter((day) => day.date < now && !["Feito", "Livre"].includes(day.status))
     .flatMap((day) =>
       Object.entries(taskLabels)
-        .filter(([key]) => !day.tasks?.[key] && !day.remappedTasks?.[key] && overdueTaskExists(day, key))
+        .filter(([key]) => !day.tasks?.[key] && !isTaskRemapped(day, key) && overdueTaskExists(day, key))
         .map(([key, label]) => ({
           id: `${day.id}:${key}`,
           kind: "task",
@@ -592,7 +592,34 @@ function isWeekendFreeDay(day) {
 function isTaskRemapped(day, key) {
   if (!day || !key) return false;
   if (day.remappedTasks?.[key]) return true;
-  return Boolean((state.outsideStudies || []).some((study) => study.sourceDayId === day.id && study.sourceTaskKey === key));
+  return Boolean((state.outsideStudies || []).some((study) => study.sourceTaskKey === key && remappedStudySourceDay(study)?.id === day.id));
+}
+
+function remappedStudySourceDay(study) {
+  if (!study?.sourceTaskKey) return null;
+  const direct = state.schedule.find((day) => day.id === study.sourceDayId);
+  if (direct) return direct;
+  const lessonKey = cleanKey(study.lesson);
+  if (!lessonKey) return null;
+  return state.schedule.find((day) => cleanKey(sourceTaskTitle(day, study.sourceTaskKey)) === lessonKey) || null;
+}
+
+function sourceTaskTitle(day, key) {
+  if (key === "medcof") return day.medcofClass || "Aula MEDCOF";
+  if (key === "step") return day.stepClass || "Aula B&B / Step 1";
+  if (key === "questions") return day.plannedQuestions || "Bloco de questoes";
+  if (key === "anki") return "Anki obrigatorio";
+  if (key === "errors") return day.errorReview || "Revisao de erros";
+  return "";
+}
+
+function cleanKey(value = "") {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function scheduleFooterTask(day, key, label) {
@@ -1199,9 +1226,15 @@ function handleOverdueReschedule(event) {
     const day = state.schedule.find((item) => item.id === form.dataset.dayId);
     const taskKey = form.dataset.taskKey;
     if (day && taskKey) {
-      state = addOutsideStudy(state, rescheduledPayload(day, taskKey, targetDate));
+      const existing = (state.outsideStudies || []).find((study) => study.sourceTaskKey === taskKey && remappedStudySourceDay(study)?.id === day.id);
+      if (existing) {
+        Object.assign(existing, rescheduledPayload(day, taskKey, targetDate), { id: existing.id, createdAt: new Date().toISOString(), completedAt: "" });
+      } else {
+        state = addOutsideStudy(state, rescheduledPayload(day, taskKey, targetDate));
+      }
       day.remappedTasks ||= {};
       day.remappedTasks[taskKey] = targetDate;
+      day.tasks[taskKey] = false;
     }
   }
   const matchingDay = state.schedule.find((day) => day.date === targetDate);

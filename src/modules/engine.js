@@ -11,6 +11,7 @@ export const TASKS = [
 export const REQUIRED_TASKS = ["medcof", "step", "anki", "errors"];
 
 export function runAutomations(state, now = todayISO()) {
+  syncRemappedOutsideStudies(state);
   state.schedule.forEach((day) => {
     day.tasks = { medcof: false, step: false, questions: false, anki: false, errors: false, ...(day.tasks || {}) };
     day.status = dayStatus(day, now, state);
@@ -354,7 +355,71 @@ function requiredTaskKeys(day, state = null) {
 function isTaskRemapped(state, day, key) {
   if (!day || !key) return false;
   if (day.remappedTasks?.[key]) return true;
-  return Boolean(state?.outsideStudies?.some((study) => study.sourceDayId === day.id && study.sourceTaskKey === key));
+  return Boolean(state?.outsideStudies?.some((study) => study.sourceTaskKey === key && remappedStudySourceDay(state, study)?.id === day.id));
+}
+
+function syncRemappedOutsideStudies(state) {
+  const linked = new Map();
+  const unlinked = [];
+  (state.outsideStudies || []).forEach((study) => {
+    if (!study.sourceTaskKey) {
+      unlinked.push(study);
+      return;
+    }
+    const day = remappedStudySourceDay(state, study);
+    if (day) study.sourceDayId = day.id;
+    const key = day ? `${day.id}:${study.sourceTaskKey}` : `${study.sourceTaskKey}:${cleanKey(study.lesson)}`;
+    const current = linked.get(key);
+    if (!current || studyTimestamp(study) >= studyTimestamp(current)) linked.set(key, study);
+  });
+  state.outsideStudies = [...unlinked, ...linked.values()];
+  state.schedule.forEach((day) => {
+    day.remappedTasks ||= {};
+    Object.keys(day.remappedTasks).forEach((key) => {
+      const hasLinkedStudy = state.outsideStudies.some((study) => study.sourceTaskKey === key && remappedStudySourceDay(state, study)?.id === day.id);
+      if (!hasLinkedStudy) delete day.remappedTasks[key];
+    });
+  });
+  state.outsideStudies.forEach((study) => {
+    const day = remappedStudySourceDay(state, study);
+    if (!day || !study.sourceTaskKey) return;
+    study.sourceDayId = day.id;
+    day.remappedTasks ||= {};
+    day.remappedTasks[study.sourceTaskKey] = study.date;
+    day.tasks ||= {};
+    day.tasks[study.sourceTaskKey] = Boolean(study.done);
+  });
+}
+
+function remappedStudySourceDay(state, study) {
+  if (!study?.sourceTaskKey) return null;
+  const direct = state.schedule?.find((day) => day.id === study.sourceDayId);
+  if (direct) return direct;
+  const lessonKey = cleanKey(study.lesson);
+  if (!lessonKey) return null;
+  return state.schedule?.find((day) => cleanKey(sourceTaskTitle(day, study.sourceTaskKey)) === lessonKey) || null;
+}
+
+function sourceTaskTitle(day, key) {
+  if (key === "medcof") return day.medcofClass || "Aula MEDCOF";
+  if (key === "step") return day.stepClass || "Aula B&B / Step 1";
+  if (key === "questions") return day.plannedQuestions || "Bloco de questoes";
+  if (key === "anki") return "Anki obrigatorio";
+  if (key === "errors") return day.errorReview || "Revisao de erros";
+  return "";
+}
+
+function studyTimestamp(study) {
+  return new Date(study.createdAt || study.completedAt || 0).getTime() || 0;
+}
+
+function cleanKey(value = "") {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function hasErrorReviewOnDate(state, date) {
