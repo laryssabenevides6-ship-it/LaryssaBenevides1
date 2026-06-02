@@ -264,7 +264,7 @@ function todayPlan(day, now) {
     { key: "questions", label: "Questões recomendadas hoje", value: day.plannedQuestions || "Meta: 30 questões", reminder: true },
     { key: "anki", label: "Anki", value: `Anki: ${day.tasks.anki ? "Feito" : "Pendente"}`, required: true },
     { key: "errors", label: "Revisão do Caderno de Erros", value: errorReviewShortText(now), required: reviewCounts.total > 0, reminder: reviewCounts.total === 0 }
-  ];
+  ].filter((item) => !["medcof", "step"].includes(item.key) || !day.remappedTasks?.[item.key]);
   const pendingTasks = taskOrder.filter((item) => item.required && !day.tasks?.[item.key]);
   const nextTask = pendingTasks[0]?.label || "Tudo feito";
   return `<section class="panel hero-plan">
@@ -548,7 +548,11 @@ function overdueCard(item) {
 function scheduleDayPanel(day) {
   const outsideStudies = (state.outsideStudies || []).filter((study) => study.date === day.date);
   const reviewCount = errorReviewCountForDate(day.date);
-  const totalItems = [day.medcofClass, day.stepClass].filter(Boolean).length + outsideStudies.length;
+  const scheduledLessonCount = [
+    day.medcofClass && !day.remappedTasks?.medcof,
+    day.stepClass && !day.remappedTasks?.step
+  ].filter(Boolean).length;
+  const totalItems = scheduledLessonCount + outsideStudies.length;
   const hasChecklistWork = !isWeekendFreeDay(day) || outsideStudies.length > 0 || ["questions", "anki", "errors"].some((key) => day.tasks?.[key]);
   return `<article class="schedule-day-panel ${day.status === "Atrasado" ? "late" : ""}">
     <header class="schedule-day-header">
@@ -634,6 +638,7 @@ function scheduleLessonCard(day, key, source, subject, title, priority) {
   if (!title) return "";
   const done = Boolean(day.tasks?.[key]);
   const remappedDate = day.remappedTasks?.[key];
+  if (remappedDate) return "";
   const isRemappedPending = Boolean(remappedDate && !done);
   return `<article class="schedule-lesson-card ${done ? "done" : ""} ${isRemappedPending ? "remapped" : ""}">
     <label class="lesson-check" title="Marcar ${source}">
@@ -949,6 +954,8 @@ function openDayModal(dayId) {
   const day = state.schedule.find((item) => item.id === dayId);
   if (!day) return;
   const hasErrorReview = errorReviewCountForDate(day.date) || day.tasks?.errors;
+  const medcofDetail = day.remappedTasks?.medcof ? "" : dailyDetailCard(day, "medcof", "Aula MEDCOF", day.medcofClass || "Sem aula MEDCOF");
+  const stepDetail = day.remappedTasks?.step ? "" : dailyDetailCard(day, "step", "Aula B&B / Step 1", day.stepClass || "Sem aula B&B");
   $("#modalContent").innerHTML = `<div class="modal-day">
     <div class="modal-day-header">
       <div>
@@ -962,8 +969,8 @@ function openDayModal(dayId) {
       <div class="day-progress-bar"><i style="width:${taskCompletion(day)}%"></i></div>
     </div>
     <div class="daily-detail-grid">
-      ${dailyDetailCard(day, "medcof", "Aula MEDCOF", day.medcofClass || "Sem aula MEDCOF")}
-      ${dailyDetailCard(day, "step", "Aula B&B / Step 1", day.stepClass || "Sem aula B&B")}
+      ${medcofDetail}
+      ${stepDetail}
       ${dailyReminderCard("Questões recomendadas", day.plannedQuestions || "25 questoes planejadas")}
       ${dailyDetailCard(day, "anki", "Anki", `Anki: ${day.tasks?.anki ? "Feito" : "Pendente"}`)}
       ${hasErrorReview ? dailyDetailCard(day, "errors", "Revisao de erros", day.errorReview || "Revisar erros abertos") : dailyReminderCard("Revisão do Caderno de Erros", "Sem revisão programada")}

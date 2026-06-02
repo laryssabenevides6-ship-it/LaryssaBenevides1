@@ -23,7 +23,6 @@ export function setTask(state, dayId, taskKey, done, now = todayISO()) {
   const day = state.schedule.find((item) => item.id === dayId);
   if (!day || !TASKS.some(([key]) => key === taskKey)) return state;
   day.tasks[taskKey] = Boolean(done);
-  if (done && day.remappedTasks?.[taskKey]) delete day.remappedTasks[taskKey];
   day.status = dayStatus(day, now, state);
   day.completedAt = day.status === "Feito" ? new Date().toISOString() : "";
   return runAutomations(state, now);
@@ -155,7 +154,6 @@ export function setOutsideStudyDone(state, studyId, done) {
     const day = state.schedule.find((item) => item.id === study.sourceDayId);
     if (day && TASKS.some(([key]) => key === study.sourceTaskKey)) {
       day.tasks[study.sourceTaskKey] = study.done;
-      if (study.done && day.remappedTasks?.[study.sourceTaskKey]) delete day.remappedTasks[study.sourceTaskKey];
       day.status = dayStatus(day, todayISO(), state);
     }
   }
@@ -314,7 +312,7 @@ function timerTitle(day, taskKey) {
 }
 
 export function taskCompletion(day) {
-  const keys = lessonTaskKeys(day);
+  const keys = lessonTaskKeys(day).filter((key) => !day.remappedTasks?.[key]);
   if (!keys.length) return 0;
   return pct(keys.filter((key) => day.tasks?.[key]).length, keys.length);
 }
@@ -346,8 +344,8 @@ export function dayStatus(day, now = todayISO(), state = null) {
 
 function requiredTaskKeys(day, state = null) {
   return [
-    day.medcofClass ? "medcof" : "",
-    day.stepClass ? "step" : "",
+    day.medcofClass && !day.remappedTasks?.medcof ? "medcof" : "",
+    day.stepClass && !day.remappedTasks?.step ? "step" : "",
     "anki",
     hasErrorReviewOnDate(state, day.date) || day.tasks?.errors ? "errors" : ""
   ].filter(Boolean);
