@@ -1367,6 +1367,10 @@ th {
     position: static;
   }
 
+  .today-main-list {
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+  }
+
   .form-grid.three,
   .form-grid.four,
   .quick-row,
@@ -1413,7 +1417,11 @@ th {
   }
 
   .plan-task-card {
-    grid-template-columns: 30px 36px minmax(0, 1fr);
+    grid-template-columns: 26px minmax(0, 1fr) 30px;
+  }
+
+  .today-main-list {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1467,9 +1475,9 @@ th {
 }
 
 .hero-plan {
-  border-color: color-mix(in srgb, var(--brand) 34%, var(--line));
+  border-color: color-mix(in srgb, var(--brand-2) 28%, var(--line));
   display: grid;
-  gap: 16px;
+  gap: 14px;
 }
 
 .today-hero-header {
@@ -1477,7 +1485,7 @@ th {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 14px;
+  margin-bottom: 4px;
 }
 
 .today-hero-header h2 {
@@ -1486,15 +1494,15 @@ th {
 
 .today-summary-strip {
   display: grid;
-  grid-template-columns: minmax(260px, 1.1fr) minmax(220px, 1fr) minmax(160px, 0.7fr);
-  gap: 12px;
+  grid-template-columns: minmax(220px, 1fr) minmax(200px, 0.9fr) minmax(140px, 0.55fr);
+  gap: 10px;
 }
 
 .today-summary-strip > div {
-  padding: 14px;
+  padding: 11px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--surface-2);
+  background: color-mix(in srgb, var(--surface-2) 72%, var(--surface));
 }
 
 .today-summary-strip small,
@@ -1507,13 +1515,13 @@ th {
 
 .today-summary-strip strong {
   display: block;
-  font-size: 22px;
+  font-size: 18px;
   line-height: 1.2;
 }
 
 .today-progress {
-  height: 7px;
-  margin-top: 10px;
+  height: 6px;
+  margin-top: 8px;
   overflow: hidden;
   border-radius: 999px;
   background: var(--surface);
@@ -1532,8 +1540,8 @@ th {
 
 .today-main-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap: 10px;
 }
 
 .today-main-list .section-title {
@@ -1574,36 +1582,37 @@ th {
 .plan-task-card {
   position: relative;
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) 42px;
-  gap: 12px;
+  grid-template-columns: 26px minmax(0, 1fr) 30px;
+  gap: 10px;
   align-items: center;
-  min-height: 108px;
-  padding: 16px !important;
+  min-height: 82px;
+  padding: 12px !important;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface-2);
 }
 
 .plan-task-card.done {
-  border-color: color-mix(in srgb, var(--brand) 42%, var(--line));
+  border-color: color-mix(in srgb, var(--brand-2) 34%, var(--line));
+  background: color-mix(in srgb, var(--brand-2) 9%, var(--surface-2));
 }
 
 .task-number {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 24px;
+  height: 24px;
   border-radius: 999px;
   background: var(--surface);
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 900;
 }
 
 .card-check {
   display: grid;
   place-items: center;
-  width: 34px;
+  width: 30px;
   justify-self: end;
 }
 
@@ -1615,8 +1624,8 @@ th {
 .card-check span {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border: 1px solid var(--line);
   border-radius: 7px;
   background: var(--surface);
@@ -1628,9 +1637,9 @@ th {
 }
 
 .card-check input:checked + span::after {
-  content: "OK";
+  content: "✓";
   color: #fff;
-  font-size: 10px;
+  font-size: 15px;
   font-weight: 900;
 }
 
@@ -1651,24 +1660,24 @@ th {
   line-height: 1.35;
   max-width: 100%;
   overflow-wrap: anywhere;
-  font-size: 17px;
+  font-size: 15px;
 }
 
 .task-copy em {
   display: inline-flex;
-  margin-top: 8px;
-  padding: 4px 8px;
+  margin-top: 6px;
+  padding: 3px 7px;
   border-radius: 999px;
   background: var(--surface);
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
   font-style: normal;
   font-weight: 900;
 }
 
 .plan-task-card.done .task-copy em {
-  background: color-mix(in srgb, var(--brand) 18%, var(--surface));
-  color: var(--brand);
+  background: color-mix(in srgb, var(--brand-2) 18%, var(--surface));
+  color: color-mix(in srgb, var(--info) 35%, var(--text));
 }
 
 .study-timer {
