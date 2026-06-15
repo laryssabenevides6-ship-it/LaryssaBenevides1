@@ -218,19 +218,27 @@ export function deleteError(state, errorId) {
 
 function errorPayload(payload) {
   const date = payload.date || todayISO();
+  const area = cleanText(payload.area) || firstLabel(payload.subject) || "Nao classificado";
+  const subject = cleanText(payload.subject) || area;
+  const subtheme = cleanText(payload.subtheme || payload.topic);
   return {
     date,
     source: payload.source || "",
     target: payload.target || "",
-    subject: cleanText(payload.subject) || "Nao classificado",
-    system: cleanText(payload.system) || "Nao classificado",
-    topic: cleanText(payload.topic),
+    area,
+    subject,
+    system: firstLabel(payload.system) || "Nao classificado",
+    subtheme,
+    topic: subtheme,
+    tags: cleanText(payload.tags),
+    relatedQuestion: cleanText(payload.relatedQuestion),
     summary: cleanText(payload.summary),
     reviewQuestion: cleanText(payload.reviewQuestion),
     expectedAnswer: cleanText(payload.expectedAnswer),
     reviewNotes: cleanText(payload.reviewNotes),
     type: normalizeErrorType(payload.type),
-    severity: payload.severity || "",
+    difficulty: normalizeDifficulty(payload.difficulty || payload.severity),
+    severity: normalizeDifficulty(payload.difficulty || payload.severity),
     reviewDate: payload.reviewDate || addDays(date, 7),
     status: normalizeErrorStatus(payload.status || "Aberto")
   };
@@ -471,23 +479,33 @@ function cleanText(value = "") {
 }
 
 function normalizeErrorType(type = "") {
-  const allowed = [
-    "Falta de conteudo",
-    "Erro de interpretacao",
-    "Tempo",
-    "Chute"
-  ];
+  const allowed = ["Conhecimento", "Raciocinio", "Atencao", "Pegadinha"];
   const migration = {
-    "Conduta/protocolo": "Falta de conteudo",
-    "Confusao conceitual": "Falta de conteudo",
-    "Fisiopatologia/mecanismo": "Falta de conteudo",
-    "Interpretacao do enunciado": "Erro de interpretacao",
-    "Desatencao/leitura rapida": "Erro de interpretacao",
-    "Tempo/pressa": "Tempo",
-    "Chute/incerteza": "Chute"
+    "Falta de conteudo": "Conhecimento",
+    "Conduta/protocolo": "Conhecimento",
+    "Confusao conceitual": "Raciocinio",
+    "Fisiopatologia/mecanismo": "Raciocinio",
+    "Erro de interpretacao": "Raciocinio",
+    "Interpretacao do enunciado": "Raciocinio",
+    "Desatencao/leitura rapida": "Atencao",
+    "Tempo/pressa": "Atencao",
+    Tempo: "Atencao",
+    "Chute/incerteza": "Pegadinha",
+    Chute: "Pegadinha"
   };
   const migrated = migration[type] || type;
-  return allowed.includes(migrated) ? migrated : "Falta de conteudo";
+  return allowed.includes(migrated) ? migrated : "Conhecimento";
+}
+
+function normalizeDifficulty(value = "") {
+  const clean = cleanText(value);
+  const migration = { Baixa: "Facil", Média: "Media", Alta: "Dificil", Critica: "Dificil", Crítica: "Dificil" };
+  const migrated = migration[clean] || clean;
+  return ["Facil", "Media", "Dificil"].includes(migrated) ? migrated : "Media";
+}
+
+function firstLabel(value = "") {
+  return splitLabels(value)[0] || "";
 }
 
 function normalizeErrorStatus(status = "") {
@@ -524,19 +542,34 @@ function summarizeErrors(errors = [], now = todayISO()) {
   const dueToday = errors.filter((error) => error.reviewDate && error.reviewDate <= now && error.status !== "Resolvido");
   const scheduledToday = dueToday.filter((error) => error.reviewDate === now);
   const overdueReview = dueToday.filter((error) => error.reviewDate < now);
-  const topicCounts = groupCount(errors, (error) => error.topic || "Sem tema");
+  const topicCounts = groupCount(errors, errorSubtheme);
+  const areaCounts = groupCount(errors, errorArea);
+  const systemCounts = groupCount(errors, errorSystem);
+  const subjectCounts = groupCount(errors, errorSubject);
+  const typeCounts = groupCount(errors, (error) => error.type || "Nao classificado");
   const recurringTopics = topEntries(topicCounts, 20)
     .filter(([, value]) => value >= 3)
     .map(([label, value]) => ({ label, value }));
-  const bySubject = groupMultiCount(errors, "subject");
-  const bySystem = groupMultiCount(errors, "system");
-  const topSubject = topMapEntry(bySubject);
-  const topSystem = topMapEntry(bySystem);
+  const topArea = topMapEntry(areaCounts);
+  const topSystem = topMapEntry(systemCounts);
+  const topSubject = topMapEntry(subjectCounts);
+  const topType = topMapEntry(typeCounts);
+  const priorities = buildReviewPriorities(errors, now);
+  const systemRanking = buildSystemRanking(errors, now);
+  const hierarchy = buildErrorHierarchy(errors);
+  const profile = Object.entries(typeCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([label, value]) => ({ label, value, percent: pct(value, errors.length) }));
+  const weaknessSystem = topSystem?.[0] || "Sem dados";
+  const weaknessErrors = topSystem?.[1] || 0;
+  const weaknessSystemErrors = errors.filter((error) => errorSystem(error) === weaknessSystem);
+  const weaknessSubject = topMapEntry(groupCount(weaknessSystemErrors, errorSubject));
+  const weaknessItems = priorities.filter((item) => item.system === weaknessSystem).slice(0, 3);
   return {
     total: errors.length,
     open: open.length,
     resolved: resolved.length,
-    recurring: Math.max(recurring.length, recurringTopics.length),
+    recurring: recurring.length,
     overdue: dueToday.length,
     scheduledToday: scheduledToday.length,
     overdueReview: overdueReview.length,
@@ -553,12 +586,185 @@ function summarizeErrors(errors = [], now = todayISO()) {
         status: error.status || "Aberto"
       })),
     recurringTopics,
-    topErrorConcentration: topSubject || topSystem ? [topSubject?.[0], topSystem?.[0]].filter(Boolean).join(" / ") : "",
+    topErrorConcentration: topSubject || topSystem ? [topSystem?.[0], topSubject?.[0]].filter(Boolean).join(" / ") : "",
     topics: topEntries(topicCounts, 6).map(([label, value]) => ({ label, value })),
-    byType: groupCount(errors, (error) => error.type),
-    bySubject,
-    bySystem
+    byType: typeCounts,
+    bySubject: subjectCounts,
+    bySystem: systemCounts,
+    byArea: areaCounts,
+    hierarchy,
+    systemRanking,
+    priorities,
+    profile,
+    profileInterpretation: errorProfileInterpretation(topType?.[0]),
+    weakness: {
+      area: topArea?.[0] || "Sem dados",
+      system: weaknessSystem,
+      subject: weaknessSubject?.[0] || "Sem dados",
+      errors: weaknessErrors,
+      priority: weaknessErrors >= 5 ? "Alta" : weaknessErrors >= 2 ? "Media" : "Baixa",
+      themes: weaknessItems.map((item) => item.label)
+    },
+    reviewToday: priorities.filter((item) => item.dueToday).slice(0, 5),
+    reviewWeek: priorities.filter((item) => item.dueThisWeek || item.priority === "Alta").slice(0, 7),
+    evolution: [7, 30, 90].map((days) => ({
+      days,
+      systems: buildWindowTrends(errors, now, days).slice(0, 5)
+    })),
+    diagnosticAlerts: buildErrorDiagnosticAlerts(errors, now, priorities)
   };
+}
+
+function errorArea(error) {
+  return firstLabel(error.area || error.subject) || "Nao classificado";
+}
+
+function errorSystem(error) {
+  return firstLabel(error.system) || "Nao classificado";
+}
+
+function errorSubject(error) {
+  return firstLabel(error.subject) || errorArea(error);
+}
+
+function errorSubtheme(error) {
+  return cleanText(error.subtheme || error.topic) || "Sem tema";
+}
+
+function buildReviewPriorities(errors, now) {
+  const groups = new Map();
+  errors.forEach((error) => {
+    const label = errorSubtheme(error);
+    const key = [errorArea(error), errorSystem(error), errorSubject(error), label].join("|");
+    if (!groups.has(key)) {
+      groups.set(key, {
+        label,
+        area: errorArea(error),
+        system: errorSystem(error),
+        subject: errorSubject(error),
+        count: 0,
+        recurring: 0,
+        recent: 0,
+        overdue: 0,
+        difficult: 0,
+        dueToday: false,
+        dueThisWeek: false
+      });
+    }
+    const item = groups.get(key);
+    item.count += 1;
+    if (error.status === "Recorrente") item.recurring += 1;
+    if (error.date >= addDays(now, -29) && error.date <= now) item.recent += 1;
+    if (error.reviewDate && error.reviewDate <= now && error.status !== "Resolvido") {
+      item.overdue += 1;
+      item.dueToday = true;
+    }
+    if (error.reviewDate && error.reviewDate > now && error.reviewDate <= addDays(now, 7) && error.status !== "Resolvido") item.dueThisWeek = true;
+    if ((error.difficulty || error.severity) === "Dificil") item.difficult += 1;
+  });
+  return [...groups.values()]
+    .map((item) => {
+      const score = item.count * 3 + item.recurring * 3 + item.recent * 2 + item.overdue * 2 + item.difficult;
+      return { ...item, score, priority: score >= 12 ? "Alta" : score >= 6 ? "Media" : "Baixa" };
+    })
+    .sort((a, b) => b.score - a.score || b.count - a.count || a.label.localeCompare(b.label));
+}
+
+function buildSystemRanking(errors, now) {
+  const counts = groupCount(errors, errorSystem);
+  const trends = new Map(buildWindowTrends(errors, now, 30).map((item) => [item.label, item]));
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([label, value], index) => ({
+      rank: index + 1,
+      label,
+      value,
+      percent: pct(value, errors.length),
+      change: trends.get(label)?.change || 0,
+      direction: trends.get(label)?.direction || "estavel"
+    }));
+}
+
+function buildErrorHierarchy(errors) {
+  const areas = new Map();
+  errors.forEach((error) => {
+    const area = errorArea(error);
+    const system = errorSystem(error);
+    const subject = errorSubject(error);
+    const theme = errorSubtheme(error);
+    if (!areas.has(area)) areas.set(area, { label: area, value: 0, systems: new Map() });
+    const areaNode = areas.get(area);
+    areaNode.value += 1;
+    if (!areaNode.systems.has(system)) areaNode.systems.set(system, { label: system, value: 0, subjects: new Map() });
+    const systemNode = areaNode.systems.get(system);
+    systemNode.value += 1;
+    if (!systemNode.subjects.has(subject)) systemNode.subjects.set(subject, { label: subject, value: 0, themes: new Map() });
+    const subjectNode = systemNode.subjects.get(subject);
+    subjectNode.value += 1;
+    subjectNode.themes.set(theme, (subjectNode.themes.get(theme) || 0) + 1);
+  });
+  return [...areas.values()]
+    .sort((a, b) => b.value - a.value)
+    .map((area) => ({
+      label: area.label,
+      value: area.value,
+      systems: [...area.systems.values()]
+        .sort((a, b) => b.value - a.value)
+        .map((system) => ({
+          label: system.label,
+          value: system.value,
+          subjects: [...system.subjects.values()]
+            .sort((a, b) => b.value - a.value)
+            .map((subject) => ({
+              label: subject.label,
+              value: subject.value,
+              themes: [...subject.themes.entries()]
+                .sort((a, b) => b[1] - a[1])
+                .map(([label, value]) => ({ label, value }))
+            }))
+        }))
+    }));
+}
+
+function buildWindowTrends(errors, now, days) {
+  const currentStart = addDays(now, -(days - 1));
+  const previousEnd = addDays(currentStart, -1);
+  const previousStart = addDays(previousEnd, -(days - 1));
+  const labels = new Set(errors.map(errorSystem));
+  return [...labels]
+    .map((label) => {
+      const current = errors.filter((error) => errorSystem(error) === label && error.date >= currentStart && error.date <= now).length;
+      const previous = errors.filter((error) => errorSystem(error) === label && error.date >= previousStart && error.date <= previousEnd).length;
+      const change = previous ? Math.round(((current - previous) / previous) * 100) : current ? 100 : 0;
+      return { label, current, previous, change: Math.abs(change), direction: change < 0 ? "melhora" : change > 0 ? "piora" : "estavel" };
+    })
+    .filter((item) => item.current || item.previous)
+    .sort((a, b) => b.current - a.current || b.previous - a.previous);
+}
+
+function errorProfileInterpretation(type) {
+  const map = {
+    Conhecimento: "Seu principal problema atual e falta de conteudo.",
+    Raciocinio: "Seu principal problema atual e raciocinio clinico.",
+    Atencao: "Seu principal problema atual e atencao durante a resolucao.",
+    Pegadinha: "Seu principal problema atual e reconhecer armadilhas das questoes."
+  };
+  return map[type] || "Registre mais erros para identificar seu perfil predominante.";
+}
+
+function buildErrorDiagnosticAlerts(errors, now, priorities) {
+  const recent20 = errors.filter((error) => error.date >= addDays(now, -19) && error.date <= now);
+  const recentCounts = groupCount(recent20, errorSubtheme);
+  const repeated = Object.entries(recentCounts).sort((a, b) => b[1] - a[1]).find(([, value]) => value >= 3);
+  const withoutReview = errors.filter((error) => !error.reviewDate && error.status !== "Resolvido").length;
+  const overdue = errors.filter((error) => error.reviewDate && error.reviewDate < now && error.status !== "Resolvido").length;
+  const staleCritical = priorities.filter((item) => item.priority === "Alta" && item.recent === 0).length;
+  return [
+    repeated ? `Voce errou ${repeated[0]} ${repeated[1]} vezes nos ultimos 20 dias.` : "",
+    overdue ? `Voce possui ${overdue} erro(s) com revisao atrasada.` : "",
+    withoutReview ? `Voce possui ${withoutReview} erro(s) sem data de revisao.` : "",
+    staleCritical ? `${staleCritical} tema(s) critico(s) nao aparecem como revisados nos ultimos 30 dias.` : ""
+  ].filter(Boolean);
 }
 
 function summarizeAccuracy(items, key) {

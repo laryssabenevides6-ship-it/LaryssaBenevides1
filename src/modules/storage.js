@@ -211,35 +211,47 @@ function normalizeOutsideStudy(study) {
 
 function normalizeError(error) {
   const typeMigration = {
-    "Conduta/protocolo": "Falta de conteudo",
-    "Confusao conceitual": "Falta de conteudo",
-    "Fisiopatologia/mecanismo": "Falta de conteudo",
-    "Interpretacao do enunciado": "Erro de interpretacao",
-    "Desatencao/leitura rapida": "Erro de interpretacao",
-    "Tempo/pressa": "Tempo",
-    "Chute/incerteza": "Chute",
-    Conceito: "Falta de conteudo",
-    Interpretacao: "Erro de interpretacao",
-    Memorizacao: "Falta de conteudo",
-    Atencao: "Erro de interpretacao"
+    "Falta de conteudo": "Conhecimento",
+    "Conduta/protocolo": "Conhecimento",
+    "Confusao conceitual": "Raciocinio",
+    "Fisiopatologia/mecanismo": "Raciocinio",
+    "Erro de interpretacao": "Raciocinio",
+    "Interpretacao do enunciado": "Raciocinio",
+    "Desatencao/leitura rapida": "Atencao",
+    "Tempo/pressa": "Atencao",
+    Tempo: "Atencao",
+    "Chute/incerteza": "Pegadinha",
+    Chute: "Pegadinha",
+    Conceito: "Conhecimento",
+    Interpretacao: "Raciocinio",
+    Memorizacao: "Conhecimento"
   };
-  const errorTypes = ["Falta de conteudo", "Erro de interpretacao", "Tempo", "Chute"];
+  const errorTypes = ["Conhecimento", "Raciocinio", "Atencao", "Pegadinha"];
   const type = typeMigration[error.type] || error.type;
   const status = error.status === "Em revisao" ? "Revisado" : error.status === "Fechado" ? "Resolvido" : error.status;
+  const legacySubject = firstLabel(error.subject) || "Nao classificado";
+  const area = error.area || legacySubject;
+  const difficultyMigration = { Baixa: "Facil", Média: "Media", Alta: "Dificil", Critica: "Dificil", Crítica: "Dificil" };
+  const difficulty = difficultyMigration[error.difficulty || error.severity] || error.difficulty || error.severity || "Media";
   return {
     id: error.id || `error-${Date.now().toString(36)}`,
     date: error.date || todayISO(),
     source: error.source || "MEDCOF",
     target: error.target || "Ambos",
-    subject: error.subject || "Nao classificado",
-    system: error.system || "Nao classificado",
-    topic: cleanText(error.topic),
+    area,
+    subject: error.subarea || legacySubject,
+    system: firstLabel(error.system) || "Nao classificado",
+    subtheme: cleanText(error.subtheme || error.topic),
+    topic: cleanText(error.subtheme || error.topic),
+    tags: cleanText(error.tags),
+    relatedQuestion: cleanText(error.relatedQuestion),
     summary: cleanText(error.summary || error.question),
     reviewQuestion: cleanText(error.reviewQuestion || error.question),
     expectedAnswer: cleanText(error.expectedAnswer),
     reviewNotes: cleanText(error.reviewNotes),
-    type: errorTypes.includes(type) ? type : "Falta de conteudo",
-    severity: error.severity || "Media",
+    type: errorTypes.includes(type) ? type : "Conhecimento",
+    difficulty: ["Facil", "Media", "Dificil"].includes(difficulty) ? difficulty : "Media",
+    severity: ["Facil", "Media", "Dificil"].includes(difficulty) ? difficulty : "Media",
     reviewDate: error.reviewDate || "",
     status: ["Aberto", "Revisado", "Resolvido", "Recorrente"].includes(status) ? status : "Aberto",
     createdAt: error.createdAt || new Date().toISOString()
@@ -248,6 +260,13 @@ function normalizeError(error) {
 
 function cleanText(value = "") {
   return String(value || "").trim().replace(/\s+/g, " ");
+}
+
+function firstLabel(value = "") {
+  return String(value || "")
+    .split(/[,;|]/)
+    .map((item) => item.trim())
+    .filter(Boolean)[0] || "";
 }
 
 function normalizeEmail(email = "") {

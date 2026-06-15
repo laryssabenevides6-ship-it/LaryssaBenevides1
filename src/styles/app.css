@@ -1363,8 +1363,16 @@ th {
   .two-col,
   .three-col,
   .split,
-  .schedule-shell {
+  .schedule-shell,
+  .weakness-dashboard,
+  .evolution-windows {
     grid-template-columns: 1fr;
+  }
+
+  .system-ranking-card,
+  .weakness-map-card,
+  .evolution-card {
+    grid-column: auto;
   }
 
   .week-sidebar {
@@ -1998,6 +2006,246 @@ th {
 .error-dashboard-grid {
   display: grid;
   gap: 16px;
+}
+
+.weakness-dashboard {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.insight-card {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.insight-heading,
+.system-rank-main,
+.priority-row,
+.profile-row,
+.evolution-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.insight-heading h3,
+.insight-card p {
+  margin: 0;
+}
+
+.insight-main {
+  font-size: 23px;
+  line-height: 1.2;
+}
+
+.weakness-path,
+.review-horizon,
+.evolution-note {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.priority-badge,
+.trend-badge {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.priority-badge.high,
+.trend-badge.piora {
+  background: color-mix(in srgb, var(--danger) 18%, var(--surface));
+  color: var(--danger);
+}
+
+.priority-badge.medium {
+  background: color-mix(in srgb, var(--warning) 18%, var(--surface));
+  color: var(--warning);
+}
+
+.priority-badge.low,
+.trend-badge.melhora {
+  background: color-mix(in srgb, var(--success) 18%, var(--surface));
+  color: var(--success);
+}
+
+.trend-badge.estavel {
+  background: color-mix(in srgb, var(--info) 16%, var(--surface));
+  color: var(--info);
+}
+
+.priority-list,
+.profile-bars,
+.diagnostic-alert-list,
+.system-ranking,
+.tree-systems,
+.tree-subjects,
+.evolution-windows {
+  display: grid;
+  gap: 8px;
+}
+
+.priority-row,
+.system-rank-row,
+.profile-row,
+.evolution-row {
+  padding: 9px 10px;
+  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.priority-row strong:first-child {
+  color: var(--brand);
+}
+
+.profile-row {
+  display: grid;
+  grid-template-columns: minmax(100px, 0.7fr) minmax(120px, 1fr);
+}
+
+.profile-row > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.profile-track {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-3);
+}
+
+.profile-track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--brand), var(--info));
+}
+
+.automatic-interpretation {
+  padding: 10px 12px;
+  border-left: 3px solid var(--brand);
+  background: color-mix(in srgb, var(--brand) 8%, var(--surface));
+  color: var(--text);
+}
+
+.diagnostic-alert-list > div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 9px;
+  padding: 9px 10px;
+  border-left: 3px solid var(--warning);
+  background: color-mix(in srgb, var(--warning) 8%, var(--surface));
+  line-height: 1.4;
+}
+
+.diagnostic-alert-list > div > span {
+  color: var(--warning);
+  font-weight: 900;
+}
+
+.diagnostic-alert-list p {
+  margin: 0;
+}
+
+.system-ranking-card,
+.weakness-map-card,
+.evolution-card {
+  grid-column: 1 / -1;
+}
+
+.system-rank-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.system-rank-main {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.system-rank-main > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.system-rank-main span {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.weakness-tree {
+  display: grid;
+  gap: 8px;
+}
+
+.weakness-tree details {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface);
+}
+
+.weakness-tree summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 12px;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.tree-systems,
+.tree-subjects {
+  padding: 0 12px 12px;
+}
+
+.tree-subject {
+  display: grid;
+  gap: 5px;
+  padding: 9px 10px;
+  border-left: 2px solid var(--brand);
+  background: var(--surface-2);
+}
+
+.tree-subject > div,
+.tree-subject li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.tree-subject ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 16px;
+}
+
+.tree-subject span,
+.tree-subject small {
+  color: var(--muted);
+}
+
+.evolution-windows {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .error-review-today {

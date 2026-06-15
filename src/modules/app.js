@@ -39,6 +39,7 @@ const views = [
 ];
 
 const SOURCE_OPTIONS = ["MEDCOF", "UWorld", "Prova antiga", "Outro"];
+const AREA_OPTIONS = ["Clinica Medica", "Cirurgia Geral", "Pediatria", "Ginecologia e Obstetricia", "Medicina Preventiva", "Step 1", "Outro"];
 const SUBJECT_OPTIONS = ["Clinica Medica", "Cirurgia Geral", "Pediatria", "Ginecologia e Obstetricia", "Preventiva/MFC", "Step 1", "Outro"];
 const SYSTEM_OPTIONS = [
   "Cardiovascular",
@@ -64,12 +65,8 @@ const SYSTEM_OPTIONS = [
   "APS/MFC",
   "Outro"
 ];
-const ERROR_TYPE_OPTIONS = [
-  "Falta de conteudo",
-  "Erro de interpretacao",
-  "Tempo",
-  "Chute"
-];
+const ERROR_TYPE_OPTIONS = ["Conhecimento", "Raciocinio", "Atencao", "Pegadinha"];
+const ERROR_DIFFICULTY_OPTIONS = ["Facil", "Media", "Dificil"];
 const ERROR_STATUS_OPTIONS = ["Aberto", "Revisado", "Resolvido", "Recorrente"];
 
 let seed = [];
@@ -892,12 +889,17 @@ function errorForm(error = null, formId = "errorForm") {
   <form id="${formId}" class="form">
     ${isEdit ? `<input type="hidden" name="id" value="${error.id}" />` : ""}
     <label class="field"><span>Data</span><input name="date" type="date" value="${error?.date || todayISO()}" required /></label>
-    ${fieldMultiSelect("subject", "Materia", SUBJECT_OPTIONS, true, error?.subject)}
-    ${fieldMultiSelect("system", "Sistemas", SYSTEM_OPTIONS, true, error?.system)}
-    ${fieldInput("topic", "Tema", "Tema especifico", "text", false, "", error?.topic)}
+    ${fieldSelect("source", "Fonte", SOURCE_OPTIONS, true, error?.source)}
+    ${fieldSelect("area", "Grande area", AREA_OPTIONS, true, error?.area)}
+    ${fieldSelect("system", "Sistema principal", SYSTEM_OPTIONS, true, error?.system)}
+    ${fieldInput("subject", "Materia / subarea", "Ex.: Infectologia Respiratoria", "text", true, "", error?.subject)}
+    ${fieldInput("subtheme", "Subtema", "Ex.: Coqueluche", "text", true, "", error?.subtheme || error?.topic)}
+    ${fieldInput("tags", "Tags secundarias", "Opcional: Pediatria, Vacinacao, Emergencia", "text", false, "", error?.tags)}
+    <label class="field full-field"><span>Questao relacionada</span><textarea name="relatedQuestion" placeholder="Enunciado resumido ou referencia da questao.">${escapeHtml(error?.relatedQuestion || "")}</textarea></label>
     <label class="field full-field"><span>Pergunta de revisao</span><textarea name="reviewQuestion" placeholder="Transforme o erro em uma pergunta para revisar depois." required>${escapeHtml(error?.reviewQuestion || "")}</textarea></label>
     <label class="field full-field"><span>Resposta esperada</span><textarea name="expectedAnswer" placeholder="Qual resposta voce espera acertar na revisao?">${escapeHtml(error?.expectedAnswer || "")}</textarea></label>
     ${fieldSelect("type", "Tipo de erro", ERROR_TYPE_OPTIONS, true, error?.type)}
+    ${fieldSelect("difficulty", "Dificuldade", ERROR_DIFFICULTY_OPTIONS, true, error?.difficulty)}
     <label class="field"><span>Data de revisao</span><input name="reviewDate" type="date" value="${error?.reviewDate || ""}" /></label>
     ${fieldSelect("status", "Status", ERROR_STATUS_OPTIONS, true, error?.status)}
     <button class="primary-button" type="submit">${isEdit ? "Salvar alteracoes" : "Salvar erro"}</button>
@@ -1343,10 +1345,15 @@ function updateQuestionCalculatedFields(event) {
 
 function errorCard(error) {
   return `<article class="task-card">
-    <div><strong>${error.topic || error.subject}</strong><span>${fmtDate(error.date)} - ${error.subject}</span></div>
+    <div>
+      <strong>${error.subtheme || error.topic || error.subject}</strong>
+      <span>${fmtDate(error.date)} - ${error.area || "Area nao classificada"} → ${error.system || "Sistema nao classificado"} → ${error.subject}</span>
+    </div>
+    ${error.relatedQuestion ? `<small>Questao relacionada: ${error.relatedQuestion}</small>` : ""}
     ${error.reviewQuestion ? `<small>Pergunta: ${error.reviewQuestion}</small>` : ""}
     ${error.expectedAnswer ? `<small>Resposta esperada: ${error.expectedAnswer}</small>` : ""}
-    <small>${error.type} - ${error.subject} - ${error.system}</small>
+    <small>${error.type} - Dificuldade ${error.difficulty || error.severity || "Media"} - ${error.status}</small>
+    ${error.tags ? `<small>Tags: ${error.tags}</small>` : ""}
     <div class="error-card-actions">
       <select data-error-status="${error.id}">${ERROR_STATUS_OPTIONS.map((status) => `<option ${status === error.status ? "selected" : ""}>${status}</option>`).join("")}</select>
       <button class="secondary-button mini-button" data-action="edit-error" data-error-id="${error.id}" type="button">Editar</button>
@@ -1485,7 +1492,7 @@ function barPairs(map, title) {
 }
 
 function errorDashboard(summary) {
-  return `<div class="section-title"><h2>Caderno de Erros</h2><span>${summary.total} erro(s)</span></div>
+  return `<div class="section-title"><h2>Diagnostico dos Erros</h2><span>${summary.total} erro(s)</span></div>
     <div class="grid metrics error-metrics">
       ${metric("Total", summary.total, "erros registrados")}
       ${metric("Abertos", summary.open, "pendentes")}
@@ -1501,13 +1508,156 @@ function errorDashboard(summary) {
       </div>
       <button class="primary-button" data-action="open-error-review-queue" type="button" ${summary.pendingReview ? "" : "disabled"}>Revisar agora</button>
     </article>
-    ${errorsDueToday(summary.dueToday)}
-    <div class="error-dashboard-grid">
-      ${miniList(summary.topics, "Temas mais errados")}
-      ${simpleRank(summary.byType, "Erros por tipo")}
-      ${simpleRank(summary.bySubject, "Erros por matéria")}
-      ${simpleRank(summary.bySystem, "Erros por sistema")}
+    <div class="weakness-dashboard">
+      ${weaknessCard(summary)}
+      ${reviewPriorityCard(summary)}
+      ${errorProfileCard(summary)}
+      ${diagnosticAlertsCard(summary.diagnosticAlerts)}
+      ${systemRankingCard(summary.systemRanking)}
+      ${weaknessMapCard(summary.hierarchy)}
+      ${errorEvolutionCard(summary.evolution)}
     </div>`;
+}
+
+function weaknessCard(summary) {
+  const weakness = summary.weakness || {};
+  return `<article class="insight-card weakness-card">
+    <div class="insight-heading"><span>Maior fraqueza atual</span><b class="priority-badge ${priorityClass(weakness.priority)}">${weakness.priority || "Baixa"}</b></div>
+    <strong class="insight-main">${weakness.system || "Sem dados"}</strong>
+    <p>${weakness.errors || 0} erro(s) em ${weakness.area || "area nao classificada"}</p>
+    <dl class="weakness-path">
+      <div><dt>Materia mais fraca</dt><dd>${weakness.subject || "Sem dados"}</dd></div>
+      <div><dt>Temas frequentes</dt><dd>${weakness.themes?.join(", ") || "Sem dados suficientes"}</dd></div>
+    </dl>
+  </article>`;
+}
+
+function reviewPriorityCard(summary) {
+  const priorities = summary.priorities || [];
+  return `<article class="insight-card review-priority-card">
+    <div class="insight-heading"><span>O que revisar primeiro</span><b>${priorities.length}</b></div>
+    <div class="priority-list">${
+      priorities
+        .slice(0, 5)
+        .map(
+          (item, index) => `<div class="priority-row">
+            <b>${index + 1}</b>
+            <div><strong>${item.label}</strong><small>${item.system} / ${item.subject} · ${item.count} erro(s)</small></div>
+            <span class="priority-badge ${priorityClass(item.priority)}">${item.priority}</span>
+          </div>`
+        )
+        .join("") || empty("Registre erros para gerar prioridades.")
+    }</div>
+    <div class="review-horizon">
+      <div><small>Revisar hoje</small><strong>${summary.reviewToday?.map((item) => item.label).join(", ") || "Nenhum tema vencido"}</strong></div>
+      <div><small>Nesta semana</small><strong>${summary.reviewWeek?.map((item) => item.label).join(", ") || "Sem prioridade definida"}</strong></div>
+    </div>
+  </article>`;
+}
+
+function errorProfileCard(summary) {
+  return `<article class="insight-card error-profile-card">
+    <div class="insight-heading"><span>Perfil dos erros</span><b>${summary.total}</b></div>
+    <div class="profile-bars">${
+      (summary.profile || [])
+        .map(
+          (item) => `<div class="profile-row">
+            <div><span>${item.label}</span><b>${item.percent}%</b></div>
+            <div class="profile-track"><i style="width:${item.percent}%"></i></div>
+          </div>`
+        )
+        .join("") || empty("Sem dados para interpretar.")
+    }</div>
+    <p class="automatic-interpretation">${summary.profileInterpretation}</p>
+  </article>`;
+}
+
+function diagnosticAlertsCard(alerts = []) {
+  return `<article class="insight-card diagnostic-alerts-card">
+    <div class="insight-heading"><span>Alertas de estudo</span><b>${alerts.length}</b></div>
+    <div class="diagnostic-alert-list">${
+      alerts.map((alert) => `<div><span>!</span><p>${alert}</p></div>`).join("") || empty("Nenhum alerta critico no momento.")
+    }</div>
+  </article>`;
+}
+
+function systemRankingCard(items = []) {
+  const max = Math.max(...items.map((item) => item.value), 1);
+  return `<article class="insight-card system-ranking-card">
+    <div class="insight-heading"><span>Ranking dos sistemas</span><b>${items.length}</b></div>
+    <div class="system-ranking">${
+      items
+        .slice(0, 8)
+        .map(
+          (item) => `<div class="system-rank-row">
+            <b>${item.rank}</b>
+            <div class="system-rank-main">
+              <div><strong>${item.label}</strong><span>${item.value} erro(s) · ${item.percent}%</span></div>
+              <div class="profile-track"><i style="width:${Math.round((item.value / max) * 100)}%"></i></div>
+            </div>
+            ${trendBadge(item)}
+          </div>`
+        )
+        .join("") || empty("Sem sistemas classificados.")
+    }</div>
+  </article>`;
+}
+
+function weaknessMapCard(hierarchy = []) {
+  return `<article class="insight-card weakness-map-card">
+    <div class="insight-heading"><span>Mapa de fraquezas</span><b>${hierarchy.length} area(s)</b></div>
+    <div class="weakness-tree">${
+      hierarchy
+        .map(
+          (area) => `<details>
+            <summary><strong>${area.label}</strong><span>${area.value}</span></summary>
+            <div class="tree-systems">${area.systems
+              .map(
+                (system) => `<details>
+                  <summary><strong>${system.label}</strong><span>${system.value}</span></summary>
+                  <div class="tree-subjects">${system.subjects
+                    .map(
+                      (subject) => `<div class="tree-subject">
+                        <div><strong>${subject.label}</strong><span>${subject.value}</span></div>
+                        <ul>${subject.themes.map((theme) => `<li><span>${theme.label}</span><b>${theme.value}</b></li>`).join("")}</ul>
+                      </div>`
+                    )
+                    .join("")}</div>
+                </details>`
+              )
+              .join("")}</div>
+          </details>`
+        )
+        .join("") || empty("Registre erros para montar o mapa.")
+    }</div>
+  </article>`;
+}
+
+function errorEvolutionCard(windows = []) {
+  return `<article class="insight-card evolution-card">
+    <div class="insight-heading"><span>Evolucao dos erros</span><b>7 / 30 / 90 dias</b></div>
+    <div class="evolution-windows">${windows
+      .map(
+        (window) => `<section>
+          <h3>Ultimos ${window.days} dias</h3>
+          <div>${window.systems
+            .map((item) => `<div class="evolution-row"><span>${item.label}</span><b>${item.current}</b>${trendBadge(item)}</div>`)
+            .join("") || `<p class="muted">Sem erros nesta janela.</p>`}</div>
+        </section>`
+      )
+      .join("")}</div>
+    <p class="evolution-note">Menos erros que no periodo anterior indica melhora; mais erros indica piora.</p>
+  </article>`;
+}
+
+function trendBadge(item) {
+  const direction = item.direction || "estavel";
+  const label = direction === "melhora" ? `Melhora ${item.change}%` : direction === "piora" ? `Piora ${item.change}%` : "Estavel";
+  return `<span class="trend-badge ${direction}">${label}</span>`;
+}
+
+function priorityClass(priority = "") {
+  return priority === "Alta" ? "high" : priority === "Media" ? "medium" : "low";
 }
 
 function errorsDueToday(items = []) {
