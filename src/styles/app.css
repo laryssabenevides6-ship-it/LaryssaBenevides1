@@ -1352,6 +1352,7 @@ th {
   .alerts,
   .metrics,
   .error-metrics,
+  .question-analysis-metrics,
   .compact-metrics,
   .today-layout,
   .today-summary-strip,
@@ -1365,7 +1366,10 @@ th {
   .split,
   .schedule-shell,
   .weakness-dashboard,
-  .evolution-windows {
+  .evolution-windows,
+  .question-analysis-grid,
+  .question-insight-strip,
+  .question-period-grid {
     grid-template-columns: 1fr;
   }
 
@@ -2001,6 +2005,118 @@ th {
 
 .error-metrics .metric strong {
   font-size: 24px;
+}
+
+.question-analysis-metrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 12px;
+}
+
+.question-analysis-metrics .metric {
+  box-shadow: none;
+}
+
+.question-insight-strip,
+.question-period-grid,
+.question-analysis-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.question-insight-strip,
+.question-period-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 12px;
+}
+
+.question-insight-strip article,
+.question-period-grid article {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.question-insight-strip span,
+.question-period-grid span,
+.question-insight-strip small,
+.question-period-grid small,
+.question-ranking-row small,
+.question-analysis-note {
+  color: var(--muted);
+}
+
+.question-insight-strip strong,
+.question-period-grid strong {
+  font-size: 20px;
+  line-height: 1.25;
+}
+
+.question-analysis-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.question-ranking-card {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.question-ranking-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.question-ranking-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px 10px;
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.question-ranking-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.question-ranking-title strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.question-ranking-title span {
+  color: var(--brand);
+  font-weight: 900;
+}
+
+.question-ranking-row .profile-track,
+.question-ranking-row small {
+  grid-column: 1;
+}
+
+.question-ranking-row .trend-badge {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  align-self: center;
+}
+
+.question-analysis-note {
+  margin: 12px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .error-dashboard-grid {

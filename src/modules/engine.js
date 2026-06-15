@@ -309,6 +309,7 @@ export function getDerived(state, now = todayISO()) {
     subjectPerformance: summarizeAccuracy(state.sessions, "subject"),
     systemPerformance: summarizeAccuracy(state.sessions, "system"),
     questionsBySource: groupCount(state.sessions, (item) => item.source),
+    questionSummary: summarizeQuestionPerformance(state.sessions, now),
     statusCounts: groupCount(schedule, (item) => item.status),
     weekProgress: weekDays.map((day) => ({ label: dayLabel(day), value: taskCompletion(day, state) })),
     errorSummary: summarizeErrors(state.errors, state.sessions, now)
@@ -821,16 +822,108 @@ function buildErrorDiagnosticAlerts(errors, questionObservations, now, prioritie
 
 function summarizeAccuracy(items, key) {
   const map = items.reduce((acc, item) => {
-    const label = item[key] || "Nao classificado";
-    acc[label] ||= { label, questions: 0, correct: 0 };
-    acc[label].questions += item.questions;
-    acc[label].correct += item.correct;
+    const labels = splitLabels(item[key]);
+    (labels.length ? labels : ["Nao classificado"]).forEach((label) => {
+      acc[label] ||= { label, questions: 0, correct: 0 };
+      acc[label].questions += item.questions;
+      acc[label].correct += item.correct;
+    });
     return acc;
   }, {});
   return Object.values(map)
     .map((item) => ({ ...item, value: pct(item.correct, item.questions) }))
     .sort((a, b) => a.value - b.value)
     .slice(0, 8);
+}
+
+function summarizeQuestionPerformance(sessions = [], now = todayISO()) {
+  const totalQuestions = sessions.reduce((sum, item) => sum + safeNumber(item.questions), 0);
+  const totalCorrect = sessions.reduce((sum, item) => sum + safeNumber(item.correct), 0);
+  const dimensions = {
+    subjects: summarizeQuestionDimension(sessions, "subject", now),
+    systems: summarizeQuestionDimension(sessions, "system", now),
+    topics: summarizeQuestionDimension(sessions, "topic", now),
+    sources: summarizeQuestionDimension(sessions, "source", now)
+  };
+  const strongestSystem = dimensions.systems
+    .filter((item) => item.questions > 0)
+    .slice()
+    .sort((a, b) => b.accuracy - a.accuracy || b.questions - a.questions)[0];
+  const weakestSystem = dimensions.systems
+    .filter((item) => item.questions > 0)
+    .slice()
+    .sort((a, b) => a.accuracy - b.accuracy || b.questions - a.questions)[0];
+  const current30 = questionPeriod(sessions, now, 30);
+  const previous30 = questionPeriod(sessions, addDays(now, -30), 30);
+  const trend = previous30.questions ? current30.accuracy - previous30.accuracy : 0;
+  return {
+    totalQuestions,
+    totalCorrect,
+    totalErrors: Math.max(0, totalQuestions - totalCorrect),
+    accuracy: pct(totalCorrect, totalQuestions),
+    blocks: sessions.length,
+    strongestSystem,
+    weakestSystem,
+    trend,
+    trendLabel: trend > 0 ? "Melhora" : trend < 0 ? "Queda" : "Estavel",
+    periods: [7, 30, 90].map((days) => ({ days, ...questionPeriod(sessions, now, days) })),
+    ...dimensions
+  };
+}
+
+function summarizeQuestionDimension(sessions, key, now) {
+  const groups = new Map();
+  sessions.forEach((session) => {
+    const labels = key === "source" ? [cleanText(session.source) || "Nao classificado"] : splitLabels(session[key]);
+    (labels.length ? labels : ["Nao classificado"]).forEach((label) => {
+      if (!groups.has(label)) groups.set(label, { label, questions: 0, correct: 0, blocks: 0, recentQuestions: 0, recentCorrect: 0, previousQuestions: 0, previousCorrect: 0 });
+      const item = groups.get(label);
+      const questions = safeNumber(session.questions);
+      const correct = safeNumber(session.correct);
+      item.questions += questions;
+      item.correct += correct;
+      item.blocks += 1;
+      if (session.date >= addDays(now, -29) && session.date <= now) {
+        item.recentQuestions += questions;
+        item.recentCorrect += correct;
+      } else if (session.date >= addDays(now, -59) && session.date <= addDays(now, -30)) {
+        item.previousQuestions += questions;
+        item.previousCorrect += correct;
+      }
+    });
+  });
+  return [...groups.values()]
+    .map((item) => {
+      const accuracy = pct(item.correct, item.questions);
+      const recentAccuracy = pct(item.recentCorrect, item.recentQuestions);
+      const previousAccuracy = pct(item.previousCorrect, item.previousQuestions);
+      const trend = item.previousQuestions && item.recentQuestions ? recentAccuracy - previousAccuracy : 0;
+      return {
+        label: item.label,
+        questions: item.questions,
+        correct: item.correct,
+        errors: Math.max(0, item.questions - item.correct),
+        blocks: item.blocks,
+        accuracy,
+        trend,
+        direction: trend > 0 ? "melhora" : trend < 0 ? "piora" : "estavel"
+      };
+    })
+    .sort((a, b) => a.accuracy - b.accuracy || b.questions - a.questions || a.label.localeCompare(b.label));
+}
+
+function questionPeriod(sessions, endDate, days) {
+  const startDate = addDays(endDate, -(days - 1));
+  const periodSessions = sessions.filter((item) => item.date >= startDate && item.date <= endDate);
+  const questions = periodSessions.reduce((sum, item) => sum + safeNumber(item.questions), 0);
+  const correct = periodSessions.reduce((sum, item) => sum + safeNumber(item.correct), 0);
+  return {
+    questions,
+    correct,
+    errors: Math.max(0, questions - correct),
+    accuracy: pct(correct, questions),
+    blocks: periodSessions.length
+  };
 }
 
 function getWeekKey(dateISO) {

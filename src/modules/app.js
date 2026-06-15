@@ -918,10 +918,8 @@ function renderDashboard(d) {
     </div>
     <div class="dashboard-grid">
       <section class="panel">${barList(d.weekProgress, "Execucao da semana")}</section>
-      <section class="panel">${barList(d.subjectPerformance, "Desempenho por materia")}</section>
-      <section class="panel">${barList(d.systemPerformance, "Desempenho por sistema")}</section>
-      <section class="panel">${barPairs(d.questionsBySource, "Questoes por fonte")}</section>
       <section class="panel">${barPairs(d.statusCounts, "Status do cronograma")}</section>
+      <section class="panel wide">${questionAnalytics(d.questionSummary)}</section>
       <section class="panel wide">${errorDashboard(d.errorSummary)}</section>
       <section class="panel">${simulationCompare()}</section>
     </div>`;
@@ -1489,6 +1487,65 @@ function barPairs(map, title) {
   const max = Math.max(...entries.map(([, value]) => value), 1);
   return `<div class="section-title"><h2>${title}</h2><span>${entries.length}</span></div>
     <div class="bar-list">${entries.map(([label, value]) => `<div class="bar-row"><span>${label}</span><div><i style="width:${Math.round((value / max) * 100)}%"></i></div><b>${value}</b></div>`).join("") || empty("Sem dados.")}</div>`;
+}
+
+function questionAnalytics(summary) {
+  const hasSystemComparison = summary.systems.length > 1;
+  return `<div class="section-title"><h2>Analise das Questoes</h2><span>${summary.blocks} bloco(s)</span></div>
+    <div class="grid metrics question-analysis-metrics">
+      ${metric("Questoes", summary.totalQuestions, "total registrado")}
+      ${metric("Acertos", summary.totalCorrect, `${summary.accuracy}% de aproveitamento`)}
+      ${metric("Erros", summary.totalErrors, "respostas incorretas")}
+      ${metric("Tendencia 30 dias", questionTrendText(summary.trend), "comparada aos 30 dias anteriores")}
+    </div>
+    <div class="question-insight-strip">
+      ${questionInsight(hasSystemComparison ? "Ponto forte" : "Sistema analisado", summary.strongestSystem?.label || "Sem dados", summary.strongestSystem ? `${summary.strongestSystem.accuracy}% em ${summary.strongestSystem.questions} questoes` : "Registre questoes")}
+      ${questionInsight(hasSystemComparison ? "Prioridade atual" : "Erros no sistema", hasSystemComparison ? summary.weakestSystem?.label || "Sem dados" : `${summary.weakestSystem?.errors || 0} erros`, summary.weakestSystem ? `${summary.weakestSystem.accuracy}% em ${summary.weakestSystem.questions} questoes` : "Registre questoes")}
+      ${questionInsight("Leitura geral", summary.accuracy ? `${summary.accuracy}% de acerto` : "Sem dados", `${summary.totalCorrect} acertos e ${summary.totalErrors} erros`)}
+    </div>
+    <div class="question-period-grid">
+      ${summary.periods.map((period) => `<article><span>Ultimos ${period.days} dias</span><strong>${period.accuracy}%</strong><small>${period.questions} questoes · ${period.correct} acertos · ${period.errors} erros</small></article>`).join("")}
+    </div>
+    <div class="question-analysis-grid">
+      ${questionRanking(summary.systems, "Desempenho por sistema")}
+      ${questionRanking(summary.subjects, "Desempenho por materia")}
+      ${questionRanking(summary.topics, "Desempenho por tema")}
+      ${questionRanking(summary.sources, "Desempenho por fonte")}
+    </div>
+    <p class="question-analysis-note">Em blocos com varias classificacoes, cada opcao selecionada recebe o desempenho do bloco para comparacao. Os totais gerais contam cada questao apenas uma vez.</p>`;
+}
+
+function questionInsight(label, value, detail) {
+  return `<article><span>${label}</span><strong>${value}</strong><small>${detail}</small></article>`;
+}
+
+function questionRanking(items = [], title) {
+  return `<article class="question-ranking-card">
+    <div class="insight-heading"><span>${title}</span><b>${items.length}</b></div>
+    <div class="question-ranking-list">${
+      items
+        .slice(0, 8)
+        .map(
+          (item) => `<div class="question-ranking-row">
+            <div class="question-ranking-title"><strong>${item.label}</strong><span>${item.accuracy}%</span></div>
+            <div class="profile-track"><i style="width:${item.accuracy}%"></i></div>
+            <small>${item.questions} questoes · ${item.correct} acertos · ${item.errors} erros · ${item.blocks} bloco(s)</small>
+            ${questionTrendBadge(item)}
+          </div>`
+        )
+        .join("") || empty("Sem questoes classificadas.")
+    }</div>
+  </article>`;
+}
+
+function questionTrendBadge(item) {
+  if (!item.trend) return `<span class="trend-badge estavel">Estavel</span>`;
+  return `<span class="trend-badge ${item.direction}">${item.trend > 0 ? "Melhora" : "Queda"} ${Math.abs(item.trend)} p.p.</span>`;
+}
+
+function questionTrendText(trend) {
+  if (!trend) return "Estavel";
+  return `${trend > 0 ? "+" : ""}${trend} p.p.`;
 }
 
 function errorDashboard(summary) {
