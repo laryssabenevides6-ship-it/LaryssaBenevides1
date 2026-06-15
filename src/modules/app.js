@@ -814,7 +814,7 @@ function renderQuestions(d) {
       <div>
         <p class="eyebrow">Questoes</p>
         <h2>Registre o bloco em menos de um minuto</h2>
-        <p class="muted">Preencha apenas desempenho quantitativo. Erros ficam separados no Caderno de Erros.</p>
+        <p class="muted">Os erros calculados em cada bloco alimentam automaticamente o Diagnostico dos Erros no Dashboard.</p>
       </div>
       <div class="quick-result">
         <div><span>Acerto do bloco</span><strong id="qAccuracyPreview">-</strong></div>
@@ -1494,7 +1494,7 @@ function barPairs(map, title) {
 function errorDashboard(summary) {
   return `<div class="section-title"><h2>Diagnostico dos Erros</h2><span>${summary.total} erro(s)</span></div>
     <div class="grid metrics error-metrics">
-      ${metric("Total", summary.total, "erros registrados")}
+      ${metric("Total analisado", summary.total, `${summary.notebookTotal} no caderno + ${summary.questionErrorTotal} em questoes`)}
       ${metric("Abertos", summary.open, "pendentes")}
       ${metric("Resolvidos", summary.resolved, "resolvidos")}
       ${metric("Recorrentes", summary.recurring, "repetidos")}
@@ -1557,7 +1557,7 @@ function reviewPriorityCard(summary) {
 
 function errorProfileCard(summary) {
   return `<article class="insight-card error-profile-card">
-    <div class="insight-heading"><span>Perfil dos erros</span><b>${summary.total}</b></div>
+    <div class="insight-heading"><span>Perfil dos erros</span><b>${summary.notebookTotal} classificado(s)</b></div>
     <div class="profile-bars">${
       (summary.profile || [])
         .map(
@@ -1568,7 +1568,7 @@ function errorProfileCard(summary) {
         )
         .join("") || empty("Sem dados para interpretar.")
     }</div>
-    <p class="automatic-interpretation">${summary.profileInterpretation}</p>
+    <p class="automatic-interpretation">${summary.profileInterpretation} O perfil por tipo considera os erros detalhados no Caderno.</p>
   </article>`;
 }
 
