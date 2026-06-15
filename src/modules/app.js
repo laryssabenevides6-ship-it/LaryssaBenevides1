@@ -75,6 +75,10 @@ let user;
 let currentView = "today";
 let selectedScheduleWeek = "";
 let showAllErrors = false;
+let errorLibrarySearch = "";
+let errorLibraryStatus = "Todos";
+let errorLibraryType = "Todos";
+let errorLibrarySearchTimer = null;
 let studyTimerTicker = null;
 
 const $ = (selector) => document.querySelector(selector);
@@ -241,11 +245,7 @@ function renderToday(d) {
   const overdue = overdueItems(d.now);
   return `
     ${todayPlan(day, d.now)}
-    ${overduePanel("Atrasados", overdue)}
-    <section class="panel">
-      <div class="section-title"><h2>Revisão do Caderno de Erros</h2><span>${d.errorSummary.pendingReview}</span></div>
-      ${errorReviewSummaryCard(d.now)}
-    </section>
+    ${overdue.length ? overduePanel("Atrasados", overdue) : ""}
     <section class="panel">
       <div class="section-title"><h2>Alertas</h2><span>prioridade do dia</span></div>
       ${alertList(d.alerts)}
@@ -254,18 +254,16 @@ function renderToday(d) {
 
 function todayPlan(day, now) {
   if (!day) return `<section class="panel hero-plan">${empty("Nenhum dia encontrado no cronograma.")}</section>`;
-  const taskOrder = [
+  const requiredTasks = [
     { key: "medcof", label: "Aula MEDCOF", value: day.medcofClass || "Sem aula MEDCOF", required: Boolean(day.medcofClass) },
-    { key: "step", label: "Aula B&B / Step 1", value: day.stepClass || "Sem aula B&B", required: Boolean(day.stepClass) },
+    { key: "step", label: "Aula B&B / Step 1", value: day.stepClass || "Sem aula B&B", required: Boolean(day.stepClass) }
+  ].filter((item) => !isTaskRemapped(day, item.key));
+  const reminderTasks = [
     { key: "questions", label: "Questões recomendadas hoje", value: day.plannedQuestions || "Meta: 30 questões", reminder: true },
-    { key: "anki", label: "Lembrete Anki", value: "Fazer Anki, se estiver previsto na sua rotina", reminder: true },
-    { key: "errors", label: "Revisão do Caderno de Erros", value: errorReviewShortText(now), reminder: true }
-  ].filter((item) => {
-    if (["medcof", "step"].includes(item.key)) return !isTaskRemapped(day, item.key);
-    if (["questions", "anki", "errors"].includes(item.key)) return hasVisibleScheduledLesson(day);
-    return true;
-  });
-  const pendingTasks = taskOrder.filter((item) => item.required && !day.tasks?.[item.key]);
+    { key: "anki", label: "Lembrete Anki", value: "Fazer Anki, se estiver previsto na sua rotina", reminder: true }
+  ].filter(() => hasVisibleScheduledLesson(day));
+  const reviewCounts = errorReviewCounts(now);
+  const pendingTasks = requiredTasks.filter((item) => item.required && !day.tasks?.[item.key]);
   const nextTask = pendingTasks[0]?.label || "Tudo feito";
   return `<section class="panel hero-plan">
     <div class="today-hero-header">
@@ -291,21 +289,39 @@ function todayPlan(day, now) {
       </div>
     </div>
     <div class="today-execution-layout">
-      <div class="today-main-list">
-        <div class="section-title compact-title"><h2>Fazer hoje</h2><span>marque conforme concluir</span></div>
-        ${taskOrder.map((item, index) => item.reminder ? reminderTaskCard(item, index + 1) : planTaskCard(day, item.key, item.label, item.value, index + 1)).join("")}
-      </div>
+      <section class="today-required-section">
+        <div class="section-title compact-title"><h2>Obrigatorio</h2><span>prioridade de execucao</span></div>
+        <div class="today-required-grid">
+          ${requiredTasks.map((item, index) => planTaskCard(day, item.key, item.label, item.value, index + 1)).join("")}
+          ${reviewCounts.total ? requiredReviewCard(now, reviewCounts) : ""}
+          ${!requiredTasks.length && !reviewCounts.total ? empty("Nenhuma tarefa obrigatoria hoje.") : ""}
+        </div>
+      </section>
+      ${reminderTasks.length ? `<section class="today-reminder-section">
+        <div class="section-title compact-title"><h2>Lembretes</h2><span>nao alteram o progresso</span></div>
+        <div class="today-reminder-grid">${reminderTasks.map((item) => reminderTaskCard(item)).join("")}</div>
+      </section>` : ""}
     </div>
   </section>`;
 }
 
-function reminderTaskCard(item, index = 1) {
+function requiredReviewCard(now, counts) {
+  return `<article class="plan-task-card required-review-card">
+    <div class="task-number">!</div>
+    <div class="task-copy">
+      <small>Revisao obrigatoria</small>
+      <strong>${errorReviewShortText(now)}</strong>
+      <em>${counts.overdue ? `${counts.overdue} atrasada(s)` : "Prevista para hoje"}</em>
+    </div>
+    <button class="primary-button mini-button" data-action="open-error-review-queue" type="button">Revisar</button>
+  </article>`;
+}
+
+function reminderTaskCard(item) {
   return `<div class="plan-task-card reminder">
-    <div class="task-number">${index}</div>
     <div class="task-copy">
       <small>${item.label}</small>
       <strong>${item.value}</strong>
-      <em>Lembrete</em>
     </div>
   </div>`;
 }
@@ -868,18 +884,35 @@ function questionsForm() {
 }
 
 function renderErrors(d) {
-  const sortedErrors = state.errors.slice().reverse();
-  const visibleErrors = showAllErrors ? sortedErrors : sortedErrors.slice(0, 4);
+  const query = errorLibrarySearch.trim().toLowerCase();
+  const sortedErrors = state.errors
+    .slice()
+    .reverse()
+    .filter((error) => errorLibraryStatus === "Todos" || error.status === errorLibraryStatus)
+    .filter((error) => errorLibraryType === "Todos" || error.type === errorLibraryType)
+    .filter((error) => {
+      if (!query) return true;
+      return [error.subtheme, error.topic, error.system, error.subject, error.type, error.summary, error.reviewQuestion]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(query);
+    });
+  const filtersActive = Boolean(query) || errorLibraryStatus !== "Todos" || errorLibraryType !== "Todos";
+  const visibleErrors = showAllErrors || filtersActive ? sortedErrors : sortedErrors.slice(0, 8);
   return `<div class="two-col">
     <section class="panel">${errorForm()}</section>
     <section class="panel">${barList(d.systemPerformance, "Sistemas mais fracos")}</section>
   </div>
-  <section class="panel"><div class="section-title"><h2>Caderno de erros</h2><span>${state.errors.length} erro(s)</span></div>
-    <div class="errors-toolbar">
-      <p class="muted">Mostrando ${visibleErrors.length} de ${state.errors.length}. A lista completa fica recolhida para manter a tela limpa.</p>
-      ${state.errors.length > 4 ? `<button class="secondary-button" data-action="toggle-errors">${showAllErrors ? "Mostrar menos" : "Ver lista completa"}</button>` : ""}
+  <section class="panel error-library"><div class="section-title"><h2>Biblioteca de erros</h2><span>${sortedErrors.length} resultado(s)</span></div>
+    <div class="error-library-toolbar">
+      <label class="error-library-search"><span>Pesquisar</span><input data-error-library-search type="search" value="${escapeHtml(errorLibrarySearch)}" placeholder="Tema, sistema, materia..." /></label>
+      <label><span>Status</span><select data-error-library-status>${["Todos", ...ERROR_STATUS_OPTIONS].map((option) => `<option ${option === errorLibraryStatus ? "selected" : ""}>${option}</option>`).join("")}</select></label>
+      <label><span>Tipo</span><select data-error-library-type>${["Todos", ...ERROR_TYPE_OPTIONS].map((option) => `<option ${option === errorLibraryType ? "selected" : ""}>${option}</option>`).join("")}</select></label>
+      ${sortedErrors.length > 8 && !filtersActive ? `<button class="secondary-button" data-action="toggle-errors">${showAllErrors ? "Mostrar menos" : "Ver todos"}</button>` : ""}
     </div>
-    <div class="record-list errors-list ${showAllErrors ? "expanded" : ""}">${visibleErrors.map(errorCard).join("") || empty("Nenhum erro registrado.")}</div>
+    <p class="error-library-count muted">Mostrando ${visibleErrors.length} de ${sortedErrors.length}. Clique em um registro para abrir os detalhes.</p>
+    <div class="errors-library-grid">${visibleErrors.map(errorCard).join("") || empty("Nenhum erro encontrado.")}</div>
   </section>`;
 }
 
@@ -907,7 +940,24 @@ function errorForm(error = null, formId = "errorForm") {
 }
 
 function renderDashboard(d) {
-  return `<div class="grid metrics">
+  const weekly = dashboardWeeklyProgress(d);
+  const pending = overdueItems(d.now).length;
+  return `<section class="dashboard-priority-grid">
+      <article class="panel dashboard-week-progress">
+        <div class="section-title"><h2>Progresso da Semana</h2><span>${weekly.done} de ${weekly.total} tarefas</span></div>
+        <strong>${weekly.percent}%</strong>
+        <div class="today-progress"><i style="width:${weekly.percent}%"></i></div>
+        <small>${weekly.done} de ${weekly.total} aulas e revisoes obrigatorias concluidas</small>
+      </article>
+      <article class="panel dashboard-priority-card">
+        <span>Pendencias</span><strong>${pending}</strong><small>aulas e revisoes atrasadas</small>
+      </article>
+      <article class="panel dashboard-priority-card danger">
+        <span>Revisoes vencidas</span><strong>${d.errorSummary.overdue}</strong><small>itens do Caderno de Erros</small>
+      </article>
+    </section>
+    <section class="panel">${errorDashboard(d.errorSummary)}</section>
+    <div class="grid metrics dashboard-secondary-metrics">
       ${lessonProgressMetric(d.lessonProgress)}
       ${metric("Questoes", d.totalQuestions, "total")}
       ${metric("Acertos", `${d.accuracy}%`, "geral")}
@@ -917,12 +967,30 @@ function renderDashboard(d) {
       ${metric("Erros", d.questionErrors, "em questoes")}
     </div>
     <div class="dashboard-grid">
-      <section class="panel">${barList(d.weekProgress, "Execucao da semana")}</section>
-      <section class="panel">${barPairs(d.statusCounts, "Status do cronograma")}</section>
       <section class="panel wide">${questionAnalytics(d.questionSummary)}</section>
-      <section class="panel wide">${errorDashboard(d.errorSummary)}</section>
+      <section class="panel">${barPairs(d.statusCounts, "Status do cronograma")}</section>
       <section class="panel">${simulationCompare()}</section>
     </div>`;
+}
+
+function dashboardWeeklyProgress(d) {
+  const dates = d.weekDays.map((day) => day.date).sort();
+  const start = dates[0];
+  const end = dates.at(-1);
+  const lessonTasks = d.weekDays.flatMap((day) =>
+    [
+      day.medcofClass && !isTaskRemapped(day, "medcof") ? { done: Boolean(day.tasks?.medcof) } : null,
+      day.stepClass && !isTaskRemapped(day, "step") ? { done: Boolean(day.tasks?.step) } : null
+    ].filter(Boolean)
+  );
+  const reviews = start && end
+    ? state.errors
+        .filter((error) => error.reviewDate >= start && error.reviewDate <= end)
+        .map((error) => ({ done: ["Revisado", "Resolvido"].includes(error.status) }))
+    : [];
+  const tasks = [...lessonTasks, ...reviews];
+  const done = tasks.filter((item) => item.done).length;
+  return { done, total: tasks.length, percent: pct(done, tasks.length) };
 }
 
 function lessonProgressMetric(progress = { done: 0, total: 0, percent: 0 }) {
@@ -1000,6 +1068,28 @@ function bindView() {
   $("#questionsForm")?.addEventListener("input", updateQuestionCalculatedFields);
   $("#questionsForm")?.addEventListener("submit", handleQuestionsSubmit);
   document.querySelectorAll("[data-multi-field] input").forEach((input) => input.addEventListener("change", () => updateMultiSummary(input.closest("[data-multi-field]"))));
+  $("[data-error-library-search]")?.addEventListener("input", (event) => {
+    errorLibrarySearch = event.currentTarget.value;
+    clearTimeout(errorLibrarySearchTimer);
+    errorLibrarySearchTimer = setTimeout(() => {
+      render();
+      const search = $("[data-error-library-search]");
+      if (search) {
+        search.focus();
+        search.setSelectionRange(search.value.length, search.value.length);
+      }
+    }, 180);
+  });
+  $("[data-error-library-status]")?.addEventListener("change", (event) => {
+    errorLibraryStatus = event.currentTarget.value;
+    showAllErrors = false;
+    render();
+  });
+  $("[data-error-library-type]")?.addEventListener("change", (event) => {
+    errorLibraryType = event.currentTarget.value;
+    showAllErrors = false;
+    render();
+  });
   $("#simulationForm")?.addEventListener("submit", handleSimulationSubmit);
   $("#outsideStudyForm")?.addEventListener("submit", handleOutsideStudySubmit);
   $("#errorForm")?.addEventListener("submit", handleErrorSubmit);
@@ -1342,22 +1432,29 @@ function updateQuestionCalculatedFields(event) {
 }
 
 function errorCard(error) {
-  return `<article class="task-card">
-    <div>
-      <strong>${error.subtheme || error.topic || error.subject}</strong>
-      <span>${fmtDate(error.date)} - ${error.area || "Area nao classificada"} → ${error.system || "Sistema nao classificado"} → ${error.subject}</span>
+  return `<details class="error-library-card">
+    <summary>
+      <div class="error-library-title"><strong>${error.subtheme || error.topic || error.subject}</strong><span>${error.system || "Sistema nao classificado"} · ${error.subject}</span></div>
+      <div class="error-library-meta"><span class="error-type-badge">${error.type}</span><time>${fmtDate(error.date)}</time></div>
+    </summary>
+    <div class="error-library-details">
+      <div class="error-detail-grid">
+        <div><small>Grande area</small><strong>${error.area || "Nao classificada"}</strong></div>
+        <div><small>Sistema</small><strong>${error.system || "Nao classificado"}</strong></div>
+        <div><small>Materia</small><strong>${error.subject || "Nao classificada"}</strong></div>
+        <div><small>Dificuldade</small><strong>${error.difficulty || error.severity || "Media"}</strong></div>
+      </div>
+      ${error.relatedQuestion ? `<p><small>Questao relacionada</small>${error.relatedQuestion}</p>` : ""}
+      ${error.reviewQuestion ? `<p><small>Pergunta de revisao</small>${error.reviewQuestion}</p>` : ""}
+      ${error.expectedAnswer ? `<p><small>Resposta esperada</small>${error.expectedAnswer}</p>` : ""}
+      ${error.tags ? `<p><small>Tags</small>${error.tags}</p>` : ""}
+      <div class="error-card-actions">
+        <select data-error-status="${error.id}" aria-label="Status do erro">${ERROR_STATUS_OPTIONS.map((status) => `<option ${status === error.status ? "selected" : ""}>${status}</option>`).join("")}</select>
+        <button class="secondary-button mini-button" data-action="edit-error" data-error-id="${error.id}" type="button">Editar</button>
+        <button class="danger-button mini-button" data-action="delete-error" data-error-id="${error.id}" type="button">Apagar</button>
+      </div>
     </div>
-    ${error.relatedQuestion ? `<small>Questao relacionada: ${error.relatedQuestion}</small>` : ""}
-    ${error.reviewQuestion ? `<small>Pergunta: ${error.reviewQuestion}</small>` : ""}
-    ${error.expectedAnswer ? `<small>Resposta esperada: ${error.expectedAnswer}</small>` : ""}
-    <small>${error.type} - Dificuldade ${error.difficulty || error.severity || "Media"} - ${error.status}</small>
-    ${error.tags ? `<small>Tags: ${error.tags}</small>` : ""}
-    <div class="error-card-actions">
-      <select data-error-status="${error.id}">${ERROR_STATUS_OPTIONS.map((status) => `<option ${status === error.status ? "selected" : ""}>${status}</option>`).join("")}</select>
-      <button class="secondary-button mini-button" data-action="edit-error" data-error-id="${error.id}" type="button">Editar</button>
-      <button class="danger-button mini-button" data-action="delete-error" data-error-id="${error.id}" type="button">Apagar</button>
-    </div>
-  </article>`;
+  </details>`;
 }
 
 function outsideStudyForm() {
