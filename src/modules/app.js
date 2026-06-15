@@ -1648,7 +1648,7 @@ function questionTrendText(trend) {
 function errorDashboard(summary) {
   return `<div class="section-title"><h2>Diagnostico dos Erros</h2><span>${summary.total} erro(s)</span></div>
     <div class="grid metrics error-metrics">
-      ${metric("Total analisado", summary.total, `${summary.notebookTotal} no caderno + ${summary.questionErrorTotal} em questoes`)}
+      ${metric("Total", summary.total, "erros no caderno")}
       ${metric("Abertos", summary.open, "pendentes")}
       ${metric("Resolvidos", summary.resolved, "resolvidos")}
       ${metric("Recorrentes", summary.recurring, "repetidos")}
@@ -1711,7 +1711,7 @@ function reviewPriorityCard(summary) {
 
 function errorProfileCard(summary) {
   return `<article class="insight-card error-profile-card">
-    <div class="insight-heading"><span>Perfil dos erros</span><b>${summary.notebookTotal} classificado(s)</b></div>
+    <div class="insight-heading"><span>Perfil dos erros</span><b>${summary.total} classificado(s)</b></div>
     <div class="profile-bars">${
       (summary.profile || [])
         .map(
@@ -1722,7 +1722,7 @@ function errorProfileCard(summary) {
         )
         .join("") || empty("Sem dados para interpretar.")
     }</div>
-    <p class="automatic-interpretation">${summary.profileInterpretation} O perfil por tipo considera os erros detalhados no Caderno.</p>
+    <p class="automatic-interpretation">${summary.profileInterpretation}</p>
   </article>`;
 }
 
