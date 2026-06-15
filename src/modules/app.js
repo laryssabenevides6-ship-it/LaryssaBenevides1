@@ -262,7 +262,7 @@ function todayPlan(day, now) {
     { key: "medcof", label: "Aula MEDCOF", value: day.medcofClass || "Sem aula MEDCOF", required: Boolean(day.medcofClass) },
     { key: "step", label: "Aula B&B / Step 1", value: day.stepClass || "Sem aula B&B", required: Boolean(day.stepClass) },
     { key: "questions", label: "Questões recomendadas hoje", value: day.plannedQuestions || "Meta: 30 questões", reminder: true },
-    { key: "anki", label: "Anki", value: `Anki: ${day.tasks.anki ? "Feito" : "Pendente"}`, required: true },
+    { key: "anki", label: "Lembrete Anki", value: "Fazer Anki, se estiver previsto na sua rotina", reminder: true },
     { key: "errors", label: "Revisão do Caderno de Erros", value: errorReviewShortText(now), required: reviewCounts.total > 0, reminder: reviewCounts.total === 0 }
   ].filter((item) => !["medcof", "step"].includes(item.key) || !isTaskRemapped(day, item.key));
   const pendingTasks = taskOrder.filter((item) => item.required && !day.tasks?.[item.key]);
@@ -405,7 +405,7 @@ function weekDayCard(day) {
     <div><strong>${dayLabel(day)}</strong><span class="status-pill ${statusClass(day.status)}">${day.status}</span></div>
     <p><b>MEDCOF:</b> ${day.medcofClass || "-"}</p>
     <p><b>B&B:</b> ${day.stepClass || "-"}</p>
-    <small>${day.plannedQuestions || "Questoes planejadas"} · Anki ${day.tasks.anki ? "feito" : "pendente"} · ${taskCompletion(day, state)}%</small>
+    <small>${day.plannedQuestions || "Questoes planejadas"} · ${taskCompletion(day, state)}% das aulas</small>
   </article>`;
 }
 
@@ -443,7 +443,6 @@ function overdueItems(now = todayISO()) {
   const taskLabels = {
     medcof: "Aula MEDCOF",
     step: "Aula B&B / Step 1",
-    anki: "Anki",
     errors: "Revisao de erros"
   };
   const scheduled = state.schedule
@@ -553,7 +552,7 @@ function scheduleDayPanel(day) {
     day.stepClass && !isTaskRemapped(day, "step")
   ].filter(Boolean).length;
   const totalItems = scheduledLessonCount + outsideStudies.length;
-  const hasChecklistWork = !isWeekendFreeDay(day) || outsideStudies.length > 0 || ["questions", "anki", "errors"].some((key) => day.tasks?.[key]);
+  const hasChecklistWork = !isWeekendFreeDay(day) || outsideStudies.length > 0 || day.tasks?.errors;
   return `<article class="schedule-day-panel ${day.status === "Atrasado" ? "late" : ""}">
     <header class="schedule-day-header">
       <div>
@@ -576,7 +575,7 @@ function scheduleDayPanel(day) {
       hasChecklistWork
         ? `<footer class="schedule-day-footer">
       ${scheduleFooterTask(day, "questions", "Questoes")}
-      ${scheduleFooterTask(day, "anki", "Anki")}
+      ${scheduleAnkiReminder()}
       ${errorReviewCountForDate(day.date) || day.tasks?.errors ? scheduleFooterTask(day, "errors", "Revisao de erros") : ""}
       <button class="secondary-button details-button" data-open-day="${day.id}">Detalhes de hoje</button>
     </footer>`
@@ -659,6 +658,16 @@ function scheduleQuestionReminder(day) {
     <div>
       <small>Questões recomendadas</small>
       <strong>${day.plannedQuestions || "Meta de questões"}</strong>
+    </div>
+  </article>`;
+}
+
+function scheduleAnkiReminder() {
+  return `<article class="schedule-footer-task reminder">
+    <span></span>
+    <div>
+      <small>Anki</small>
+      <strong>Lembrete da rotina</strong>
     </div>
   </article>`;
 }
@@ -1021,7 +1030,7 @@ function openDayModal(dayId) {
       ${medcofDetail}
       ${stepDetail}
       ${dailyReminderCard("Questões recomendadas", day.plannedQuestions || "25 questoes planejadas")}
-      ${dailyDetailCard(day, "anki", "Anki", `Anki: ${day.tasks?.anki ? "Feito" : "Pendente"}`)}
+      ${dailyReminderCard("Anki", "Lembrete da rotina, sem necessidade de marcar")}
       ${hasErrorReview ? dailyDetailCard(day, "errors", "Revisao de erros", day.errorReview || "Revisar erros abertos") : dailyReminderCard("Revisão do Caderno de Erros", "Sem revisão programada")}
     </div>
   </div>`;

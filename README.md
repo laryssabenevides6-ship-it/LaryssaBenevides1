@@ -13,7 +13,7 @@ Central diaria de execucao para Residencia BR e USMLE Step 1, com cronograma imp
 - Anki simplificado como tarefa diaria: Feito ou Pendente.
 - Registro de questoes feitas com fonte, modo, selecao, formato, prova-alvo, materia, sistema, tema, numero de questoes, acertos, percentual, tempo total e tempo medio.
 - Caderno de erros como banco de revisao, com status Aberto, Revisado, Resolvido e Recorrente.
-- Alertas inteligentes para aulas atrasadas, Anki pendente, tarefas incompletas, erros antigos, poucas questoes na semana e simulados proximos.
+- Alertas inteligentes para aulas atrasadas, tarefas obrigatorias incompletas, erros antigos, poucas questoes na semana e simulados proximos.
 - Backup JSON, importacao, restauracao e modo claro/escuro.
 
 ## Observacao de autenticacao

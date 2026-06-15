@@ -8,7 +8,7 @@ export const TASKS = [
   ["errors", "Revisao de erros"]
 ];
 
-export const REQUIRED_TASKS = ["medcof", "step", "anki", "errors"];
+export const REQUIRED_TASKS = ["medcof", "step", "errors"];
 
 export function runAutomations(state, now = todayISO()) {
   syncRemappedOutsideStudies(state);
@@ -338,8 +338,9 @@ export function taskStatus(day, key) {
 export function dayStatus(day, now = todayISO(), state = null) {
   if (isFreeDay(day)) return "Livre";
   const required = requiredTaskKeys(day, state);
+  if (!required.length) return "Livre";
   const done = required.filter((key) => day.tasks?.[key]).length;
-  if (required.length && done === required.length) return "Feito";
+  if (done === required.length) return "Feito";
   if (day.date < now) return "Atrasado";
   if (done > 0) return "Parcial";
   return "Pendente";
@@ -349,7 +350,6 @@ function requiredTaskKeys(day, state = null) {
   return [
     day.medcofClass && !isTaskRemapped(state, day, "medcof") ? "medcof" : "",
     day.stepClass && !isTaskRemapped(state, day, "step") ? "step" : "",
-    "anki",
     hasErrorReviewOnDate(state, day.date) || day.tasks?.errors ? "errors" : ""
   ].filter(Boolean);
 }
@@ -459,7 +459,6 @@ function buildAlerts(state, now, overdueDays, openErrors, weekQuestions) {
   const today = state.schedule.find((item) => item.date === now);
   const errorSummary = summarizeErrors(state.errors, now);
 
-  if (today && !today.tasks?.anki) alerts.push({ tone: "info", text: "Anki pendente hoje." });
   if (today && !["Feito", "Livre"].includes(today.status)) alerts.push({ tone: "warning", text: "Tarefa obrigatoria incompleta no plano de hoje." });
   if (errorSummary.dueToday.length) alerts.push({ tone: "danger", text: `Revisoes pendentes: ${errorSummary.dueToday.length} erros para revisar hoje.` });
   if (errorSummary.recurringTopics[0]) alerts.push({ tone: "warning", text: `Tema recorrente: ${errorSummary.recurringTopics[0].label}.` });
