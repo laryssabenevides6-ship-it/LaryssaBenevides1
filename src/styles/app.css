@@ -2245,6 +2245,12 @@ body[data-theme="light"] .schedule-day-header {
   cursor: pointer;
 }
 
+.schedule-footer-task.reminder {
+  grid-template-columns: minmax(0, 1fr);
+  border-style: dashed;
+  cursor: default;
+}
+
 .schedule-footer-task.done {
   border-color: color-mix(in srgb, var(--brand) 34%, var(--line));
 }

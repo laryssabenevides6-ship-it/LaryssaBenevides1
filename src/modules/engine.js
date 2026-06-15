@@ -8,7 +8,7 @@ export const TASKS = [
   ["errors", "Revisao de erros"]
 ];
 
-export const REQUIRED_TASKS = ["medcof", "step", "errors"];
+export const REQUIRED_TASKS = ["medcof", "step"];
 
 export function runAutomations(state, now = todayISO()) {
   syncRemappedOutsideStudies(state);
@@ -349,8 +349,7 @@ export function dayStatus(day, now = todayISO(), state = null) {
 function requiredTaskKeys(day, state = null) {
   return [
     day.medcofClass && !isTaskRemapped(state, day, "medcof") ? "medcof" : "",
-    day.stepClass && !isTaskRemapped(state, day, "step") ? "step" : "",
-    hasErrorReviewOnDate(state, day.date) || day.tasks?.errors ? "errors" : ""
+    day.stepClass && !isTaskRemapped(state, day, "step") ? "step" : ""
   ].filter(Boolean);
 }
 
@@ -444,10 +443,6 @@ function cleanKey(value = "") {
     .toLowerCase()
     .replace(/\s+/g, " ")
     .trim();
-}
-
-function hasErrorReviewOnDate(state, date) {
-  return Boolean(state?.errors?.some((error) => error.reviewDate === date && error.status !== "Resolvido"));
 }
 
 export function dayLabel(day) {
