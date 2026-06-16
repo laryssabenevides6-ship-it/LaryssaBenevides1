@@ -2001,19 +2001,19 @@ th {
 
 .overdue-review-card {
   grid-template-columns: 26px minmax(0, 1fr) auto;
-  border-color: color-mix(in srgb, var(--warning) 42%, var(--line));
+  border-color: color-mix(in srgb, var(--info) 38%, var(--line));
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--warning) 9%, transparent), transparent 62%),
-    color-mix(in srgb, var(--warning) 7%, var(--surface));
+    linear-gradient(90deg, color-mix(in srgb, var(--info) 10%, transparent), transparent 62%),
+    color-mix(in srgb, var(--info) 7%, var(--surface));
 }
 
 .overdue-review-card .task-number {
-  background: color-mix(in srgb, var(--warning) 20%, var(--surface));
-  color: var(--warning);
+  background: color-mix(in srgb, var(--info) 18%, var(--surface));
+  color: var(--info);
 }
 
 .overdue-review-card strong {
-  color: var(--warning);
+  color: color-mix(in srgb, var(--info) 72%, var(--text));
 }
 
 .overdue-card small,
