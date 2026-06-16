@@ -259,7 +259,7 @@ export function getDerived(state, now = todayISO()) {
   const completedDays = schedule.filter((item) => item.status === "Feito");
   const lessonTotals = schedule.reduce(
     (acc, day) => {
-      const keys = lessonTaskKeys(day);
+      const keys = lessonTaskKeys(day).filter((key) => !isTaskSkipped(day, key));
       acc.total += keys.length;
       acc.done += keys.filter((key) => day.tasks?.[key]).length;
       return acc;
@@ -324,7 +324,7 @@ function timerTitle(day, taskKey) {
 }
 
 export function taskCompletion(day, state = null) {
-  const keys = lessonTaskKeys(day).filter((key) => !isTaskRemapped(state, day, key));
+  const keys = lessonTaskKeys(day).filter((key) => !isTaskRemapped(state, day, key) && !isTaskSkipped(day, key));
   if (!keys.length) return 0;
   return pct(keys.filter((key) => day.tasks?.[key]).length, keys.length);
 }
@@ -357,9 +357,13 @@ export function dayStatus(day, now = todayISO(), state = null) {
 
 function requiredTaskKeys(day, state = null) {
   return [
-    day.medcofClass && !isTaskRemapped(state, day, "medcof") ? "medcof" : "",
-    day.stepClass && !isTaskRemapped(state, day, "step") ? "step" : ""
+    day.medcofClass && !isTaskRemapped(state, day, "medcof") && !isTaskSkipped(day, "medcof") ? "medcof" : "",
+    day.stepClass && !isTaskRemapped(state, day, "step") && !isTaskSkipped(day, "step") ? "step" : ""
   ].filter(Boolean);
+}
+
+function isTaskSkipped(day, key) {
+  return Boolean(day?.skippedTasks?.[key]);
 }
 
 function isTaskRemapped(state, day, key) {

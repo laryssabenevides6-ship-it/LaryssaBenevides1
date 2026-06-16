@@ -184,6 +184,7 @@ function normalizeScheduleItem(item) {
     ...item,
     tasks,
     remappedTasks: item.remappedTasks || {},
+    skippedTasks: item.skippedTasks || {},
     status: item.status || "Pendente",
     completedAt: item.completedAt || "",
     movedToBacklog: Boolean(item.movedToBacklog)

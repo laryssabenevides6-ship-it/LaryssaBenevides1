@@ -1562,6 +1562,11 @@ th {
     width: 100%;
   }
 
+  .overdue-remove-button {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+  }
+
   .review-summary-card,
   .review-card-actions {
     grid-template-columns: 1fr;
@@ -1931,7 +1936,7 @@ th {
 
 .overdue-card {
   display: grid;
-  grid-template-columns: 26px minmax(0, 1fr) minmax(230px, auto);
+  grid-template-columns: 26px minmax(0, 1fr) minmax(230px, auto) auto;
   gap: 10px;
   align-items: center;
   padding: 10px 12px;
@@ -1967,6 +1972,23 @@ th {
   padding: 6px 8px;
   background: var(--surface);
   color: var(--text);
+}
+
+.overdue-remove-button {
+  justify-self: end;
+  white-space: nowrap;
+}
+
+.overdue-list-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .review-summary-card {

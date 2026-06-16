@@ -75,6 +75,7 @@ let user;
 let currentView = "today";
 let selectedScheduleWeek = "";
 let showAllErrors = false;
+let showAllOverdue = false;
 let errorLibrarySearch = "";
 let errorLibraryStatus = "Todos";
 let errorLibraryType = "Todos";
@@ -257,7 +258,7 @@ function todayPlan(day, now) {
   const requiredTasks = [
     { key: "medcof", label: "Aula MEDCOF", value: day.medcofClass || "Sem aula MEDCOF", required: Boolean(day.medcofClass) },
     { key: "step", label: "Aula B&B / Step 1", value: day.stepClass || "Sem aula B&B", required: Boolean(day.stepClass) }
-  ].filter((item) => !isTaskRemapped(day, item.key));
+  ].filter((item) => !isTaskRemapped(day, item.key) && !isTaskSkipped(day, item.key));
   const reminderTasks = [
     { key: "questions", label: "Questões recomendadas hoje", value: day.plannedQuestions || "Meta: 30 questões", reminder: true },
     { key: "anki", label: "Lembrete Anki", value: "Fazer Anki, se estiver previsto na sua rotina", reminder: true }
@@ -464,7 +465,7 @@ function overdueItems(now = todayISO()) {
     .filter((day) => day.date < now && !["Feito", "Livre"].includes(day.status))
     .flatMap((day) =>
       Object.entries(taskLabels)
-        .filter(([key]) => !day.tasks?.[key] && !isTaskRemapped(day, key) && overdueTaskExists(day, key))
+        .filter(([key]) => !day.tasks?.[key] && !isTaskRemapped(day, key) && !isTaskSkipped(day, key) && overdueTaskExists(day, key))
         .map(([key, label]) => ({
           id: `${day.id}:${key}`,
           kind: "task",
@@ -519,9 +520,15 @@ function overdueTaskTitle(day, key) {
 }
 
 function overduePanel(title, items) {
+  const visibleItems = showAllOverdue ? items : items.slice(0, 5);
+  const hiddenCount = Math.max(0, items.length - visibleItems.length);
   return `<section class="panel overdue-panel">
     <div class="section-title"><h2>${title}</h2><span>${items.length} pendencia(s)</span></div>
-    <div class="overdue-list">${items.map(overdueCard).join("") || empty("Nenhuma pendencia atrasada.")}</div>
+    <div class="overdue-list">${visibleItems.map(overdueCard).join("") || empty("Nenhuma pendencia atrasada.")}</div>
+    ${hiddenCount || showAllOverdue ? `<div class="overdue-list-footer">
+      <span>${hiddenCount ? `${hiddenCount} pendencia(s) oculta(s)` : "Lista completa visivel"}</span>
+      <button class="secondary-button mini-button" data-action="toggle-overdue-list" type="button">${showAllOverdue ? "Mostrar menos" : "Ver todas"}</button>
+    </div>` : ""}
   </section>`;
 }
 
@@ -556,6 +563,7 @@ function overdueCard(item) {
       <input name="date" type="date" value="${target}" min="${todayISO()}" aria-label="Nova data" />
       <button class="secondary-button mini-button" type="submit">Remanejar</button>
     </form>
+    <button class="danger-button mini-button overdue-remove-button" data-action="dismiss-overdue" data-kind="${item.kind}" data-day-id="${item.dayId || ""}" data-task-key="${item.taskKey || ""}" data-study-id="${item.studyId || ""}" type="button">Remover</button>
   </article>`;
 }
 
@@ -563,8 +571,8 @@ function scheduleDayPanel(day) {
   const outsideStudies = (state.outsideStudies || []).filter((study) => study.date === day.date);
   const reviewCount = errorReviewCountForDate(day.date);
   const scheduledLessonCount = [
-    day.medcofClass && !isTaskRemapped(day, "medcof"),
-    day.stepClass && !isTaskRemapped(day, "step")
+    day.medcofClass && !isTaskRemapped(day, "medcof") && !isTaskSkipped(day, "medcof"),
+    day.stepClass && !isTaskRemapped(day, "step") && !isTaskSkipped(day, "step")
   ].filter(Boolean).length;
   const totalItems = scheduledLessonCount + outsideStudies.length;
   const hasScheduledLessons = scheduledLessonCount > 0;
@@ -605,13 +613,17 @@ function isWeekendFreeDay(day) {
 }
 
 function hasVisibleScheduledLesson(day) {
-  return Boolean((day.medcofClass && !isTaskRemapped(day, "medcof")) || (day.stepClass && !isTaskRemapped(day, "step")));
+  return Boolean((day.medcofClass && !isTaskRemapped(day, "medcof") && !isTaskSkipped(day, "medcof")) || (day.stepClass && !isTaskRemapped(day, "step") && !isTaskSkipped(day, "step")));
 }
 
 function isTaskRemapped(day, key) {
   if (!day || !key) return false;
   if (day.remappedTasks?.[key]) return true;
   return Boolean((state.outsideStudies || []).some((study) => remappedStudySourceKey(study) === key && remappedStudySourceDay(study)?.id === day.id));
+}
+
+function isTaskSkipped(day, key) {
+  return Boolean(day?.skippedTasks?.[key]);
 }
 
 function remappedStudySourceDay(study) {
@@ -706,6 +718,7 @@ function scheduleErrorReviewCard(date, count) {
 
 function scheduleLessonCard(day, key, source, subject, title, priority) {
   if (!title) return "";
+  if (isTaskSkipped(day, key)) return "";
   const done = Boolean(day.tasks?.[key]);
   const remappedDate = day.remappedTasks?.[key];
   if (isTaskRemapped(day, key)) return "";
@@ -983,8 +996,8 @@ function dashboardWeeklyProgress(d) {
   const end = dates.at(-1);
   const lessonTasks = d.weekDays.flatMap((day) =>
     [
-      day.medcofClass && !isTaskRemapped(day, "medcof") ? { done: Boolean(day.tasks?.medcof) } : null,
-      day.stepClass && !isTaskRemapped(day, "step") ? { done: Boolean(day.tasks?.step) } : null
+      day.medcofClass && !isTaskRemapped(day, "medcof") && !isTaskSkipped(day, "medcof") ? { done: Boolean(day.tasks?.medcof) } : null,
+      day.stepClass && !isTaskRemapped(day, "step") && !isTaskSkipped(day, "step") ? { done: Boolean(day.tasks?.step) } : null
     ].filter(Boolean)
   );
   const reviews = start && end
@@ -1105,8 +1118,8 @@ function openDayModal(dayId) {
   const day = state.schedule.find((item) => item.id === dayId);
   if (!day) return;
   const hasErrorReview = errorReviewCountForDate(day.date) > 0;
-  const medcofDetail = isTaskRemapped(day, "medcof") ? "" : dailyDetailCard(day, "medcof", "Aula MEDCOF", day.medcofClass || "Sem aula MEDCOF");
-  const stepDetail = isTaskRemapped(day, "step") ? "" : dailyDetailCard(day, "step", "Aula B&B / Step 1", day.stepClass || "Sem aula B&B");
+  const medcofDetail = isTaskRemapped(day, "medcof") || isTaskSkipped(day, "medcof") ? "" : dailyDetailCard(day, "medcof", "Aula MEDCOF", day.medcofClass || "Sem aula MEDCOF");
+  const stepDetail = isTaskRemapped(day, "step") || isTaskSkipped(day, "step") ? "" : dailyDetailCard(day, "step", "Aula B&B / Step 1", day.stepClass || "Sem aula B&B");
   $("#modalContent").innerHTML = `<div class="modal-day">
     <div class="modal-day-header">
       <div>
@@ -1203,6 +1216,8 @@ function handleAction(event) {
     applyTheme();
   }
   if (action === "toggle-errors") showAllErrors = !showAllErrors;
+  if (action === "toggle-overdue-list") showAllOverdue = !showAllOverdue;
+  if (action === "dismiss-overdue") dismissOverdueItem(event.currentTarget);
   if (action === "remove-outside") state.outsideStudies = (state.outsideStudies || []).filter((study) => study.id !== event.currentTarget.dataset.studyId);
   if (action === "export") exportState(state);
   if (action === "reset" && confirm("Restaurar cronograma limpo para este usuario?")) state = resetState(user.id, seed);
@@ -1355,6 +1370,22 @@ function handleOverdueReschedule(event) {
   const matchingDay = state.schedule.find((day) => day.date === targetDate);
   if (matchingDay?.week) selectedScheduleWeek = matchingDay.week;
   persistRender();
+}
+
+function dismissOverdueItem(button) {
+  const kind = button.dataset.kind;
+  if (!confirm("Remover esta pendencia da lista de atrasados? Ela nao sera marcada como feita.")) return;
+  if (kind === "outside") {
+    state.outsideStudies = (state.outsideStudies || []).filter((study) => study.id !== button.dataset.studyId);
+    return;
+  }
+  const day = state.schedule.find((item) => item.id === button.dataset.dayId);
+  const taskKey = button.dataset.taskKey;
+  if (!day || !taskKey) return;
+  day.skippedTasks ||= {};
+  day.skippedTasks[taskKey] = true;
+  day.tasks ||= {};
+  day.tasks[taskKey] = false;
 }
 
 function rescheduledPayload(day, taskKey, date) {
