@@ -2946,18 +2946,16 @@ th {
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  padding: 15px 18px;
+  padding: 14px 18px 13px;
   border-bottom: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
-  background:
-    linear-gradient(90deg, color-mix(in srgb, var(--brand-2) 34%, var(--surface-2)), color-mix(in srgb, var(--danger) 10%, var(--surface-2))),
-    var(--surface-2);
-  box-shadow: inset 4px 0 0 var(--danger);
+  background: color-mix(in srgb, var(--surface-2) 74%, var(--surface));
+  box-shadow: inset 4px 0 0 color-mix(in srgb, var(--brand) 72%, var(--brand-2));
 }
 
 .schedule-day-header h3 {
-  margin: 0 0 4px;
-  color: #fff;
-  font-size: 20px;
+  margin: 0 0 5px;
+  color: var(--text);
+  font-size: 21px;
   line-height: 1.12;
 }
 
@@ -2971,11 +2969,11 @@ th {
   display: inline-flex;
   margin-top: 4px;
   padding: 3px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.84);
-  font-size: 13px;
+  background: color-mix(in srgb, var(--brand-2) 26%, var(--surface));
+  color: color-mix(in srgb, var(--text) 88%, var(--muted));
+  font-size: 12px;
   font-weight: 900;
 }
 
@@ -2993,15 +2991,13 @@ th {
   min-height: 24px;
   padding: 4px 9px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
+  background: color-mix(in srgb, var(--brand-2) 22%, var(--surface));
+  color: var(--text);
   font-size: 12px;
 }
 
 body[data-theme="light"] .schedule-day-header {
-  background:
-    linear-gradient(90deg, color-mix(in srgb, var(--brand-2) 72%, #fff), color-mix(in srgb, var(--danger) 18%, #fff)),
-    var(--brand-2);
+  background: color-mix(in srgb, var(--surface-2) 72%, #fff);
 }
 
 .schedule-lesson-list {
