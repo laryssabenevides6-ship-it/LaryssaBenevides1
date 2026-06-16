@@ -522,9 +522,15 @@ function overdueTaskTitle(day, key) {
 function overduePanel(title, items) {
   const visibleItems = showAllOverdue ? items : items.slice(0, 5);
   const hiddenCount = Math.max(0, items.length - visibleItems.length);
+  const lessonItems = visibleItems.filter((item) => item.kind !== "error-review");
+  const reviewItems = visibleItems.filter((item) => item.kind === "error-review");
   return `<section class="panel overdue-panel">
     <div class="section-title"><h2>${title}</h2><span>${items.length} pendencia(s)</span></div>
-    <div class="overdue-list">${visibleItems.map(overdueCard).join("") || empty("Nenhuma pendencia atrasada.")}</div>
+    <div class="overdue-groups">
+      ${lessonItems.length ? overdueGroup("Aulas atrasadas", lessonItems, "lesson") : ""}
+      ${reviewItems.length ? overdueGroup("Revisoes atrasadas", reviewItems, "review") : ""}
+      ${visibleItems.length ? "" : empty("Nenhuma pendencia atrasada.")}
+    </div>
     ${hiddenCount || showAllOverdue ? `<div class="overdue-list-footer">
       <span>${hiddenCount ? `${hiddenCount} pendencia(s) oculta(s)` : "Lista completa visivel"}</span>
       <button class="secondary-button mini-button" data-action="toggle-overdue-list" type="button">${showAllOverdue ? "Mostrar menos" : "Ver todas"}</button>
@@ -532,10 +538,17 @@ function overduePanel(title, items) {
   </section>`;
 }
 
+function overdueGroup(title, items, tone) {
+  return `<section class="overdue-group ${tone}">
+    <div class="overdue-group-title"><strong>${title}</strong><span>${items.length}</span></div>
+    <div class="overdue-list">${items.map(overdueCard).join("")}</div>
+  </section>`;
+}
+
 function overdueCard(item) {
   const target = addDays(todayISO(), 1);
   if (item.kind === "error-review") {
-    return `<article class="overdue-card">
+    return `<article class="overdue-card overdue-review-card">
       <div class="task-number">!</div>
       <div>
         <small>${fmtDate(item.date)} - ${item.label}</small>

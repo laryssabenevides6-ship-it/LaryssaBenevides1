@@ -1567,6 +1567,10 @@ th {
     grid-template-columns: 26px minmax(0, 1fr);
   }
 
+  .overdue-review-card .primary-button {
+    grid-column: 1 / -1;
+  }
+
   .overdue-reschedule {
     grid-column: 1 / -1;
     justify-content: stretch;
@@ -1944,6 +1948,41 @@ th {
   border-color: color-mix(in srgb, var(--danger) 32%, var(--line));
 }
 
+.overdue-groups {
+  display: grid;
+  gap: 12px;
+}
+
+.overdue-group {
+  display: grid;
+  gap: 8px;
+}
+
+.overdue-group-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 2px;
+}
+
+.overdue-group-title strong {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.overdue-group-title span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
 .overdue-list {
   display: grid;
   gap: 8px;
@@ -1958,6 +1997,23 @@ th {
   border: 1px solid color-mix(in srgb, var(--danger) 24%, var(--line));
   border-radius: 8px;
   background: color-mix(in srgb, var(--danger) 5%, var(--surface));
+}
+
+.overdue-review-card {
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  border-color: color-mix(in srgb, var(--warning) 42%, var(--line));
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--warning) 9%, transparent), transparent 62%),
+    color-mix(in srgb, var(--warning) 7%, var(--surface));
+}
+
+.overdue-review-card .task-number {
+  background: color-mix(in srgb, var(--warning) 20%, var(--surface));
+  color: var(--warning);
+}
+
+.overdue-review-card strong {
+  color: var(--warning);
 }
 
 .overdue-card small,
