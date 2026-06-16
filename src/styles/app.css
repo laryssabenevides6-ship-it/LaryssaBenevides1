@@ -366,8 +366,9 @@ h2 {
 }
 
 .error-entry-layout {
-  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
-  align-items: start;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
 }
 
 .compact-side-panel {
@@ -1161,6 +1162,23 @@ th {
 
 .compact-side-panel .bar-row b {
   font-size: 13px;
+}
+
+.compact-horizontal-panel {
+  padding: 12px 14px;
+}
+
+.compact-horizontal-panel .section-title {
+  margin-bottom: 8px;
+}
+
+.compact-horizontal-panel .bar-list {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.compact-horizontal-panel .bar-row {
+  grid-template-columns: minmax(0, 1fr) 70px auto;
+  padding: 7px 9px;
 }
 
 .line-chart {
