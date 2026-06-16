@@ -942,7 +942,16 @@ function errorForm(error = null, formId = "errorForm") {
 function renderDashboard(d) {
   const weekly = dashboardWeeklyProgress(d);
   const pending = overdueItems(d.now).length;
-  return `<section class="dashboard-priority-grid">
+  return `<div class="grid metrics dashboard-secondary-metrics dashboard-sticky-metrics">
+      ${lessonProgressMetric(d.lessonProgress)}
+      ${metric("Questoes", d.totalQuestions, "total")}
+      ${metric("Acertos", `${d.accuracy}%`, "geral")}
+      ${metric("Hoje", d.todayQuestions, "questoes feitas")}
+      ${metric("Semana", d.weekQuestions, "questoes feitas")}
+      ${metric("Mes", d.monthQuestions, "questoes feitas")}
+      ${metric("Erros", d.questionErrors, "em questoes")}
+    </div>
+    <section class="dashboard-priority-grid">
       <article class="panel dashboard-week-progress">
         <div class="section-title"><h2>Progresso da Semana</h2><span>${weekly.done} de ${weekly.total} tarefas</span></div>
         <strong>${weekly.percent}%</strong>
@@ -957,15 +966,6 @@ function renderDashboard(d) {
       </article>
     </section>
     <section class="panel">${errorDashboard(d.errorSummary)}</section>
-    <div class="grid metrics dashboard-secondary-metrics">
-      ${lessonProgressMetric(d.lessonProgress)}
-      ${metric("Questoes", d.totalQuestions, "total")}
-      ${metric("Acertos", `${d.accuracy}%`, "geral")}
-      ${metric("Hoje", d.todayQuestions, "questoes feitas")}
-      ${metric("Semana", d.weekQuestions, "questoes feitas")}
-      ${metric("Mes", d.monthQuestions, "questoes feitas")}
-      ${metric("Erros", d.questionErrors, "em questoes")}
-    </div>
     <div class="dashboard-grid">
       <section class="panel wide">${questionAnalytics(d.questionSummary)}</section>
       <section class="panel">${barPairs(d.statusCounts, "Status do cronograma")}</section>
