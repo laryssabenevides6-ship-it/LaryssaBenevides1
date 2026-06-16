@@ -1450,6 +1450,21 @@ th {
     grid-column: auto;
   }
 
+  .weakness-dashboard {
+    grid-template-areas:
+      "weakness"
+      "priority"
+      "profile"
+      "alerts"
+      "ranking"
+      "map"
+      "evolution";
+  }
+
+  .review-horizon {
+    grid-template-columns: 1fr;
+  }
+
   .week-sidebar {
     position: static;
     max-height: 300px;
@@ -2401,8 +2416,41 @@ th {
 .weakness-dashboard {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-areas:
+    "weakness priority"
+    "profile alerts"
+    "ranking map"
+    "evolution evolution";
   align-items: start;
   gap: 12px;
+}
+
+.weakness-card {
+  grid-area: weakness;
+}
+
+.review-priority-card {
+  grid-area: priority;
+}
+
+.error-profile-card {
+  grid-area: profile;
+}
+
+.diagnostic-alerts-card {
+  grid-area: alerts;
+}
+
+.system-ranking-card {
+  grid-area: ranking;
+}
+
+.weakness-map-card {
+  grid-area: map;
+}
+
+.evolution-card {
+  grid-area: evolution;
 }
 
 .insight-card {
@@ -2414,6 +2462,10 @@ th {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: color-mix(in srgb, var(--surface-2) 88%, transparent);
+}
+
+.error-dashboard-section .insight-card {
+  height: 100%;
 }
 
 .insight-card .insight-heading {
@@ -2454,6 +2506,10 @@ th {
   margin: 0;
 }
 
+.review-horizon {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .weakness-path > div,
 .review-horizon > div {
   padding: 8px 10px;
@@ -2464,6 +2520,7 @@ th {
 
 .weakness-path dt,
 .review-horizon small {
+  display: block;
   margin-bottom: 3px;
   color: var(--muted);
   font-size: 12px;
@@ -2537,6 +2594,11 @@ th {
   min-width: 0;
 }
 
+.priority-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
 .priority-row strong,
 .priority-row small {
   display: block;
@@ -2575,6 +2637,7 @@ th {
   border-left: 3px solid var(--brand);
   background: color-mix(in srgb, var(--brand) 8%, var(--surface));
   color: var(--text);
+  line-height: 1.4;
 }
 
 .diagnostic-alert-list > div {
@@ -2606,7 +2669,7 @@ th {
 .system-ranking-card .system-ranking,
 .weakness-map-card .weakness-tree,
 .evolution-card .evolution-windows {
-  max-height: 280px;
+  max-height: 260px;
   overflow-x: hidden;
   overflow-y: auto;
   padding-right: 4px;
@@ -3303,6 +3366,17 @@ body[data-theme="light"] .board-cell textarea {
   .question-analysis-grid,
   .weakness-dashboard {
     grid-template-columns: 1fr;
+  }
+
+  .weakness-dashboard {
+    grid-template-areas:
+      "weakness"
+      "priority"
+      "profile"
+      "alerts"
+      "ranking"
+      "map"
+      "evolution";
   }
 
   .dashboard-secondary-metrics {
