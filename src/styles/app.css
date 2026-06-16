@@ -2230,12 +2230,16 @@ th {
 .dashboard-priority-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.55fr) repeat(2, minmax(190px, 0.72fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .dashboard-week-progress,
 .dashboard-priority-card {
   box-shadow: none;
+}
+
+.dashboard-week-progress {
+  padding: 14px 16px;
 }
 
 .dashboard-week-progress,
@@ -2247,20 +2251,22 @@ th {
 
 .dashboard-week-progress > strong {
   display: block;
-  margin-bottom: 8px;
-  font-size: 34px;
+  margin-bottom: 6px;
+  font-size: 28px;
+  line-height: 1;
 }
 
 .dashboard-week-progress > small {
   display: block;
-  margin-top: 9px;
+  margin-top: 7px;
 }
 
 .dashboard-priority-card {
   display: grid;
   align-content: center;
-  gap: 8px;
-  min-height: 118px;
+  gap: 6px;
+  min-height: 88px;
+  padding-block: 14px;
 }
 
 .dashboard-priority-card > span,
@@ -2269,7 +2275,7 @@ th {
 }
 
 .dashboard-priority-card > strong {
-  font-size: 32px;
+  font-size: 26px;
   line-height: 1;
 }
 
@@ -2279,7 +2285,7 @@ th {
 
 .dashboard-secondary-metrics {
   grid-template-columns: minmax(220px, 1.35fr) repeat(3, minmax(150px, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .dashboard-sticky-metrics {
@@ -2287,7 +2293,7 @@ th {
   top: 0;
   z-index: 20;
   margin: -2px -2px 0;
-  padding: 8px 2px 12px;
+  padding: 6px 2px 8px;
   background: linear-gradient(
     180deg,
     var(--bg) 0%,
@@ -2299,14 +2305,23 @@ th {
 .dashboard-secondary-metrics .metric {
   display: grid;
   align-content: start;
-  min-height: 116px;
-  padding: 15px;
+  min-height: 82px;
+  padding: 11px 13px;
   box-shadow: none;
 }
 
 .dashboard-secondary-metrics .metric strong {
-  font-size: 28px;
+  margin: 5px 0 2px;
+  font-size: 23px;
   line-height: 1;
+}
+
+.dashboard-secondary-metrics .metric span,
+.dashboard-secondary-metrics .metric small,
+.dashboard-priority-card > span,
+.dashboard-priority-card > small,
+.dashboard-week-progress > small {
+  font-size: 12px;
 }
 
 .dashboard-analysis-section {
