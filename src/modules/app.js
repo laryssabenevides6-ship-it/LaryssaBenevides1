@@ -1623,7 +1623,8 @@ function barPairs(map, title) {
 
 function questionAnalytics(summary) {
   const hasSystemComparison = summary.systems.length > 1;
-  return `<div class="section-title"><h2>Analise das Questoes</h2><span>${summary.blocks} bloco(s)</span></div>
+  return `<div class="dashboard-analysis-section question-dashboard-section">
+    <div class="section-title"><h2>Analise das Questoes</h2><span>${summary.blocks} bloco(s)</span></div>
     <div class="grid metrics question-analysis-metrics">
       ${metric("Questoes", summary.totalQuestions, "total registrado")}
       ${metric("Acertos", summary.totalCorrect, `${summary.accuracy}% de aproveitamento`)}
@@ -1644,7 +1645,8 @@ function questionAnalytics(summary) {
       ${questionRanking(summary.topics, "Desempenho por tema")}
       ${questionRanking(summary.sources, "Desempenho por fonte")}
     </div>
-    <p class="question-analysis-note">Em blocos com varias classificacoes, cada opcao selecionada recebe o desempenho do bloco para comparacao. Os totais gerais contam cada questao apenas uma vez.</p>`;
+    <p class="question-analysis-note">Em blocos com varias classificacoes, cada opcao selecionada recebe o desempenho do bloco para comparacao. Os totais gerais contam cada questao apenas uma vez.</p>
+  </div>`;
 }
 
 function questionInsight(label, value, detail) {
@@ -1683,7 +1685,8 @@ function questionTrendText(trend) {
 }
 
 function errorDashboard(summary) {
-  return `<div class="section-title"><h2>Diagnostico dos Erros</h2><span>${summary.total} erro(s)</span></div>
+  return `<div class="dashboard-analysis-section error-dashboard-section">
+    <div class="section-title"><h2>Diagnostico dos Erros</h2><span>${summary.total} erro(s)</span></div>
     <div class="grid metrics error-metrics">
       ${metric("Total", summary.total, "erros no caderno")}
       ${metric("Abertos", summary.open, "pendentes")}
@@ -1707,7 +1710,8 @@ function errorDashboard(summary) {
       ${systemRankingCard(summary.systemRanking)}
       ${weaknessMapCard(summary.hierarchy)}
       ${errorEvolutionCard(summary.evolution)}
-    </div>`;
+    </div>
+  </div>`;
 }
 
 function weaknessCard(summary) {

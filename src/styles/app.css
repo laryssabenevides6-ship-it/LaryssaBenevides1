@@ -2225,21 +2225,50 @@ th {
   font-size: 23px;
 }
 
-.error-metrics .metric {
+.dashboard-analysis-section {
+  display: grid;
+  gap: 14px;
+}
+
+.dashboard-analysis-section > .section-title {
+  margin-bottom: 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+}
+
+.dashboard-analysis-section > .section-title h2 {
+  font-size: 19px;
+}
+
+.dashboard-analysis-section > .section-title span {
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.error-metrics,
+.question-analysis-metrics {
+  gap: 10px;
+}
+
+.error-metrics .metric,
+.question-analysis-metrics .metric {
+  min-height: 96px;
+  padding: 13px 14px;
+  border-color: color-mix(in srgb, var(--line) 84%, transparent);
   box-shadow: none;
 }
 
-.error-metrics .metric strong {
+.error-metrics .metric strong,
+.question-analysis-metrics .metric strong {
   font-size: 24px;
+  line-height: 1.1;
 }
 
 .question-analysis-metrics {
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin-bottom: 12px;
-}
-
-.question-analysis-metrics .metric {
-  box-shadow: none;
 }
 
 .question-insight-strip,
@@ -2252,18 +2281,17 @@ th {
 .question-insight-strip,
 .question-period-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-bottom: 12px;
 }
 
 .question-insight-strip article,
 .question-period-grid article {
   display: grid;
-  gap: 5px;
+  gap: 6px;
   min-width: 0;
-  padding: 13px;
+  padding: 12px 13px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--surface-2);
+  background: color-mix(in srgb, var(--surface-2) 86%, transparent);
 }
 
 .question-insight-strip span,
@@ -2277,7 +2305,7 @@ th {
 
 .question-insight-strip strong,
 .question-period-grid strong {
-  font-size: 20px;
+  font-size: 19px;
   line-height: 1.25;
 }
 
@@ -2290,10 +2318,15 @@ th {
   align-content: start;
   gap: 10px;
   min-width: 0;
-  padding: 14px;
+  padding: 13px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--surface-2);
+  background: color-mix(in srgb, var(--surface-2) 88%, transparent);
+}
+
+.question-ranking-card .insight-heading {
+  padding-bottom: 6px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
 }
 
 .question-ranking-list {
@@ -2306,7 +2339,7 @@ th {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 7px 10px;
-  min-height: 78px;
+  min-height: 72px;
   padding: 9px 10px;
   border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
   border-radius: 6px;
@@ -2351,7 +2384,11 @@ th {
 }
 
 .question-analysis-note {
-  margin: 12px 0 0;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-2) 76%, transparent);
   font-size: 12px;
   line-height: 1.45;
 }
@@ -2365,7 +2402,7 @@ th {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
-  gap: 14px;
+  gap: 12px;
 }
 
 .insight-card {
@@ -2373,10 +2410,15 @@ th {
   align-content: start;
   gap: 10px;
   min-width: 0;
-  padding: 14px;
+  padding: 13px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--surface-2);
+  background: color-mix(in srgb, var(--surface-2) 88%, transparent);
+}
+
+.insight-card .insight-heading {
+  padding-bottom: 6px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
 }
 
 .insight-heading,
@@ -2394,7 +2436,7 @@ th {
 }
 
 .insight-main {
-  font-size: 23px;
+  font-size: 21px;
   line-height: 1.2;
 }
 
@@ -2403,6 +2445,34 @@ th {
 .evolution-note {
   color: var(--muted);
   line-height: 1.45;
+}
+
+.weakness-path,
+.review-horizon {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.weakness-path > div,
+.review-horizon > div {
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.weakness-path dt,
+.review-horizon small {
+  margin-bottom: 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.weakness-path dd,
+.review-horizon strong {
+  margin: 0;
+  color: var(--text);
 }
 
 .priority-badge,
@@ -2452,7 +2522,7 @@ th {
 .system-rank-row,
 .profile-row,
 .evolution-row {
-  padding: 9px 10px;
+  padding: 8px 10px;
   border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
   border-radius: 6px;
   background: var(--surface);
@@ -2460,6 +2530,19 @@ th {
 
 .priority-row strong:first-child {
   color: var(--brand);
+}
+
+.priority-row > div,
+.priority-row small {
+  min-width: 0;
+}
+
+.priority-row strong,
+.priority-row small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .profile-row {
@@ -2488,7 +2571,7 @@ th {
 }
 
 .automatic-interpretation {
-  padding: 10px 12px;
+  padding: 9px 11px;
   border-left: 3px solid var(--brand);
   background: color-mix(in srgb, var(--brand) 8%, var(--surface));
   color: var(--text);
@@ -2498,7 +2581,7 @@ th {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 9px;
-  padding: 9px 10px;
+  padding: 9px 11px;
   border-left: 3px solid var(--warning);
   background: color-mix(in srgb, var(--warning) 8%, var(--surface));
   line-height: 1.4;
@@ -2570,9 +2653,16 @@ th {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  padding: 11px 12px;
+  padding: 10px 12px;
   cursor: pointer;
   font-weight: 800;
+}
+
+.weakness-tree summary strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tree-systems,
@@ -2613,6 +2703,14 @@ th {
 
 .evolution-windows section {
   min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.evolution-windows section h3 {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .evolution-row {
