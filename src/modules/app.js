@@ -1621,11 +1621,12 @@ function questionInsight(label, value, detail) {
 }
 
 function questionRanking(items = [], title) {
+  const visibleItems = items.slice(0, 3);
+  const hiddenCount = Math.max(0, items.length - visibleItems.length);
   return `<article class="question-ranking-card">
     <div class="insight-heading"><span>${title}</span><b>${items.length}</b></div>
     <div class="question-ranking-list">${
-      items
-        .slice(0, 8)
+      visibleItems
         .map(
           (item) => `<div class="question-ranking-row">
             <div class="question-ranking-title"><strong>${item.label}</strong><span>${item.accuracy}%</span></div>
@@ -1636,6 +1637,7 @@ function questionRanking(items = [], title) {
         )
         .join("") || empty("Sem questoes classificadas.")
     }</div>
+    ${hiddenCount ? `<p class="question-ranking-more">+ ${hiddenCount} item(ns) oculto(s) para manter o Dashboard limpo.</p>` : ""}
   </article>`;
 }
 

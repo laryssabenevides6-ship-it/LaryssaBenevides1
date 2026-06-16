@@ -2264,6 +2264,9 @@ th {
 }
 
 .question-ranking-card {
+  display: grid;
+  align-content: start;
+  gap: 10px;
   min-width: 0;
   padding: 14px;
   border: 1px solid var(--line);
@@ -2274,7 +2277,6 @@ th {
 .question-ranking-list {
   display: grid;
   gap: 8px;
-  margin-top: 12px;
 }
 
 .question-ranking-row {
@@ -2282,7 +2284,8 @@ th {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 7px 10px;
-  padding: 10px;
+  min-height: 78px;
+  padding: 9px 10px;
   border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
   border-radius: 6px;
   background: var(--surface);
@@ -2315,6 +2318,14 @@ th {
   grid-column: 2;
   grid-row: 1 / span 3;
   align-self: center;
+}
+
+.question-ranking-more {
+  margin: 0;
+  padding-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .question-analysis-note {
