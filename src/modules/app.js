@@ -968,9 +968,13 @@ function renderDashboard(d) {
     <section class="panel">${errorDashboard(d.errorSummary)}</section>
     <div class="dashboard-grid">
       <section class="panel wide">${questionAnalytics(d.questionSummary)}</section>
-      <section class="panel">${barPairs(d.statusCounts, "Status do cronograma")}</section>
+      <section class="panel">${barPairs(withoutFreeStatus(d.statusCounts), "Status do cronograma")}</section>
       <section class="panel">${simulationCompare()}</section>
     </div>`;
+}
+
+function withoutFreeStatus(statusCounts = {}) {
+  return Object.fromEntries(Object.entries(statusCounts).filter(([status]) => status !== "Livre"));
 }
 
 function dashboardWeeklyProgress(d) {
