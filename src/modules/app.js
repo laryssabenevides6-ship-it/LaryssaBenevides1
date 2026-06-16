@@ -900,9 +900,9 @@ function renderErrors(d) {
     });
   const filtersActive = Boolean(query) || errorLibraryStatus !== "Todos" || errorLibraryType !== "Todos";
   const visibleErrors = showAllErrors || filtersActive ? sortedErrors : sortedErrors.slice(0, 8);
-  return `<div class="two-col">
+  return `<div class="two-col error-entry-layout">
     <section class="panel">${errorForm()}</section>
-    <section class="panel">${barList(d.systemPerformance, "Sistemas mais fracos")}</section>
+    <section class="panel compact-side-panel">${barList(d.systemPerformance, "Sistemas mais fracos")}</section>
   </div>
   <section class="panel error-library"><div class="section-title"><h2>Biblioteca de erros</h2><span>${sortedErrors.length} resultado(s)</span></div>
     <div class="error-library-toolbar">

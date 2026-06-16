@@ -365,6 +365,15 @@ h2 {
   gap: 18px;
 }
 
+.error-entry-layout {
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+  align-items: start;
+}
+
+.compact-side-panel {
+  align-self: start;
+}
+
 .three-col {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1115,6 +1124,43 @@ th {
   height: 100%;
   border-radius: inherit;
   background: linear-gradient(90deg, var(--brand), var(--brand-2));
+}
+
+.compact-side-panel .section-title {
+  margin-bottom: 10px;
+}
+
+.compact-side-panel .bar-list {
+  display: grid;
+  gap: 8px;
+}
+
+.compact-side-panel .bar-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 92px auto;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--surface-2) 72%, transparent);
+}
+
+.compact-side-panel .bar-row span {
+  width: auto;
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.compact-side-panel .bar-row div {
+  height: 6px;
+}
+
+.compact-side-panel .bar-row b {
+  font-size: 13px;
 }
 
 .line-chart {
@@ -2417,17 +2463,19 @@ th {
   margin: 0;
 }
 
-.system-ranking-card,
-.weakness-map-card,
-.evolution-card {
-  grid-column: 1 / -1;
-}
-
 .system-rank-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 12px;
+}
+
+.system-ranking-card .system-ranking,
+.weakness-map-card .weakness-tree,
+.evolution-card .evolution-windows {
+  max-height: 280px;
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .system-rank-main {
