@@ -958,9 +958,6 @@ function renderDashboard(d) {
       ${lessonProgressMetric(d.lessonProgress)}
       ${metric("Questoes", d.totalQuestions, "total")}
       ${metric("Acertos", `${d.accuracy}%`, "geral")}
-      ${metric("Hoje", d.todayQuestions, "questoes feitas")}
-      ${metric("Semana", d.weekQuestions, "questoes feitas")}
-      ${metric("Mes", d.monthQuestions, "questoes feitas")}
       ${metric("Erros", d.questionErrors, "em questoes")}
     </div>
     <section class="dashboard-priority-grid">
@@ -979,7 +976,7 @@ function renderDashboard(d) {
     </section>
     <section class="panel">${errorDashboard(d.errorSummary)}</section>
     <div class="dashboard-grid">
-      <section class="panel wide">${questionAnalytics(d.questionSummary)}</section>
+      <section class="panel wide">${questionAnalytics(d.questionSummary, d)}</section>
       <section class="panel">${barPairs(withoutFreeStatus(d.statusCounts), "Status do cronograma")}</section>
       <section class="panel">${simulationCompare()}</section>
     </div>`;
@@ -1620,7 +1617,7 @@ function barPairs(map, title) {
     <div class="bar-list">${entries.map(([label, value]) => `<div class="bar-row"><span>${label}</span><div><i style="width:${Math.round((value / max) * 100)}%"></i></div><b>${value}</b></div>`).join("") || empty("Sem dados.")}</div>`;
 }
 
-function questionAnalytics(summary) {
+function questionAnalytics(summary, d) {
   const hasSystemComparison = summary.systems.length > 1;
   return `<div class="dashboard-analysis-section question-dashboard-section">
     <div class="section-title"><h2>Analise das Questoes</h2><span>${summary.blocks} bloco(s)</span></div>
@@ -1636,6 +1633,9 @@ function questionAnalytics(summary) {
       ${questionInsight("Leitura geral", summary.accuracy ? `${summary.accuracy}% de acerto` : "Sem dados", `${summary.totalCorrect} acertos e ${summary.totalErrors} erros`)}
     </div>
     <div class="question-period-grid">
+      <article><span>Hoje</span><strong>${d.todayQuestions}</strong><small>questoes feitas</small></article>
+      <article><span>Semana</span><strong>${d.weekQuestions}</strong><small>questoes feitas</small></article>
+      <article><span>Mes</span><strong>${d.monthQuestions}</strong><small>questoes feitas</small></article>
       ${summary.periods.map((period) => `<article><span>Ultimos ${period.days} dias</span><strong>${period.accuracy}%</strong><small>${period.questions} questoes · ${period.correct} acertos · ${period.errors} erros</small></article>`).join("")}
     </div>
     <div class="question-analysis-grid">

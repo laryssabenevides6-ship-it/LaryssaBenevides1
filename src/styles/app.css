@@ -2173,13 +2173,20 @@ th {
 
 .dashboard-priority-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.8fr) repeat(2, minmax(180px, 0.6fr));
+  grid-template-columns: minmax(0, 1.55fr) repeat(2, minmax(190px, 0.72fr));
   gap: 12px;
 }
 
 .dashboard-week-progress,
 .dashboard-priority-card {
   box-shadow: none;
+}
+
+.dashboard-week-progress,
+.dashboard-priority-card,
+.dashboard-secondary-metrics .metric {
+  border-color: color-mix(in srgb, var(--line) 82%, transparent);
+  background: color-mix(in srgb, var(--surface) 92%, var(--surface-2));
 }
 
 .dashboard-week-progress > strong {
@@ -2196,7 +2203,8 @@ th {
 .dashboard-priority-card {
   display: grid;
   align-content: center;
-  gap: 5px;
+  gap: 8px;
+  min-height: 118px;
 }
 
 .dashboard-priority-card > span,
@@ -2205,7 +2213,8 @@ th {
 }
 
 .dashboard-priority-card > strong {
-  font-size: 34px;
+  font-size: 32px;
+  line-height: 1;
 }
 
 .dashboard-priority-card.danger {
@@ -2213,8 +2222,8 @@ th {
 }
 
 .dashboard-secondary-metrics {
-  grid-template-columns: repeat(7, minmax(120px, 1fr));
-  gap: 10px;
+  grid-template-columns: minmax(220px, 1.35fr) repeat(3, minmax(150px, 1fr));
+  gap: 12px;
 }
 
 .dashboard-sticky-metrics {
@@ -2222,7 +2231,7 @@ th {
   top: 0;
   z-index: 20;
   margin: -2px -2px 0;
-  padding: 8px 2px 10px;
+  padding: 8px 2px 12px;
   background: linear-gradient(
     180deg,
     var(--bg) 0%,
@@ -2232,12 +2241,16 @@ th {
 }
 
 .dashboard-secondary-metrics .metric {
-  padding: 13px;
+  display: grid;
+  align-content: start;
+  min-height: 116px;
+  padding: 15px;
   box-shadow: none;
 }
 
 .dashboard-secondary-metrics .metric strong {
-  font-size: 23px;
+  font-size: 28px;
+  line-height: 1;
 }
 
 .dashboard-analysis-section {
@@ -2296,6 +2309,11 @@ th {
 .question-insight-strip,
 .question-period-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.question-period-grid article:nth-child(-n + 3) {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--surface-2) 58%, transparent);
 }
 
 .question-insight-strip article,
