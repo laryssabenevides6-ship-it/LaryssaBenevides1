@@ -952,7 +952,6 @@ function errorForm(error = null, formId = "errorForm") {
     ${fieldSelect("system", "Sistema principal", SYSTEM_OPTIONS, true, error?.system)}
     ${fieldInput("subject", "Materia / subarea", "Ex.: Infectologia Respiratoria", "text", true, "", error?.subject)}
     ${fieldInput("subtheme", "Subtema", "Ex.: Coqueluche", "text", true, "", error?.subtheme || error?.topic)}
-    ${fieldInput("tags", "Tags secundarias", "Opcional: Pediatria, Vacinacao, Emergencia", "text", false, "", error?.tags)}
     <label class="field full-field"><span>Questao relacionada</span><textarea name="relatedQuestion" placeholder="Enunciado resumido ou referencia da questao.">${escapeHtml(error?.relatedQuestion || "")}</textarea></label>
     <label class="field full-field"><span>Pergunta de revisao</span><textarea name="reviewQuestion" placeholder="Transforme o erro em uma pergunta para revisar depois." required>${escapeHtml(error?.reviewQuestion || "")}</textarea></label>
     <label class="field full-field"><span>Resposta esperada</span><textarea name="expectedAnswer" placeholder="Qual resposta voce espera acertar na revisao?">${escapeHtml(error?.expectedAnswer || "")}</textarea></label>
@@ -1491,7 +1490,6 @@ function errorCard(error) {
       ${error.relatedQuestion ? `<p><small>Questao relacionada</small>${error.relatedQuestion}</p>` : ""}
       ${error.reviewQuestion ? `<p><small>Pergunta de revisao</small>${error.reviewQuestion}</p>` : ""}
       ${error.expectedAnswer ? `<p><small>Resposta esperada</small>${error.expectedAnswer}</p>` : ""}
-      ${error.tags ? `<p><small>Tags</small>${error.tags}</p>` : ""}
       <div class="error-card-actions">
         <select data-error-status="${error.id}" aria-label="Status do erro">${ERROR_STATUS_OPTIONS.map((status) => `<option ${status === error.status ? "selected" : ""}>${status}</option>`).join("")}</select>
         <button class="secondary-button mini-button" data-action="edit-error" data-error-id="${error.id}" type="button">Editar</button>
