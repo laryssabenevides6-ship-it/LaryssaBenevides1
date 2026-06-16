@@ -601,7 +601,6 @@ function scheduleDayPanel(day) {
       ${hasScheduledLessons ? scheduleQuestionReminder(day) : ""}
       ${hasScheduledLessons ? scheduleAnkiReminder() : ""}
       ${hasScheduledLessons ? scheduleWeeklyReviewReminder(day) : ""}
-      <button class="secondary-button details-button" data-open-day="${day.id}">Detalhes de hoje</button>
     </footer>`
         : ""
     }
