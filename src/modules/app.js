@@ -67,7 +67,12 @@ const SYSTEM_OPTIONS = [
 ];
 const ERROR_TYPE_OPTIONS = ["Conhecimento", "Raciocinio", "Atencao", "Pegadinha"];
 const ERROR_DIFFICULTY_OPTIONS = ["Facil", "Media", "Dificil"];
-const ERROR_STATUS_OPTIONS = ["Aberto", "Revisado", "Resolvido", "Recorrente"];
+const ERROR_STATUS_OPTIONS = [
+  { value: "Aberto", label: "Aberto - ainda precisa revisar" },
+  { value: "Revisado", label: "Revisado - ja revisei, acompanhar" },
+  { value: "Resolvido", label: "Resolvido - erro dominado" },
+  { value: "Recorrente", label: "Recorrente - erro repetido" }
+];
 
 let seed = [];
 let state;
@@ -932,7 +937,7 @@ function renderErrors(d) {
   <section class="panel error-library"><div class="section-title"><h2>Biblioteca de erros</h2><span>${sortedErrors.length} resultado(s)</span></div>
     <div class="error-library-toolbar">
       <label class="error-library-search"><span>Pesquisar</span><input data-error-library-search type="search" value="${escapeHtml(errorLibrarySearch)}" placeholder="Tema, sistema, materia..." /></label>
-      <label><span>Status</span><select data-error-library-status>${["Todos", ...ERROR_STATUS_OPTIONS].map((option) => `<option ${option === errorLibraryStatus ? "selected" : ""}>${option}</option>`).join("")}</select></label>
+      <label><span>Status</span><select data-error-library-status>${["Todos", ...ERROR_STATUS_OPTIONS].map((option) => `<option value="${escapeHtml(optionValue(option))}" ${optionValue(option) === errorLibraryStatus ? "selected" : ""}>${escapeHtml(optionLabel(option))}</option>`).join("")}</select></label>
       <label><span>Tipo</span><select data-error-library-type>${["Todos", ...ERROR_TYPE_OPTIONS].map((option) => `<option ${option === errorLibraryType ? "selected" : ""}>${option}</option>`).join("")}</select></label>
       ${sortedErrors.length > 8 && !filtersActive ? `<button class="secondary-button" data-action="toggle-errors">${showAllErrors ? "Mostrar menos" : "Ver todos"}</button>` : ""}
     </div>
@@ -1491,7 +1496,7 @@ function errorCard(error) {
       ${error.reviewQuestion ? `<p><small>Pergunta de revisao</small>${error.reviewQuestion}</p>` : ""}
       ${error.expectedAnswer ? `<p><small>Resposta esperada</small>${error.expectedAnswer}</p>` : ""}
       <div class="error-card-actions">
-        <select data-error-status="${error.id}" aria-label="Status do erro">${ERROR_STATUS_OPTIONS.map((status) => `<option ${status === error.status ? "selected" : ""}>${status}</option>`).join("")}</select>
+        <select data-error-status="${error.id}" aria-label="Status do erro">${ERROR_STATUS_OPTIONS.map((status) => `<option value="${escapeHtml(optionValue(status))}" ${optionValue(status) === error.status ? "selected" : ""}>${escapeHtml(optionLabel(status))}</option>`).join("")}</select>
         <button class="secondary-button mini-button" data-action="edit-error" data-error-id="${error.id}" type="button">Editar</button>
         <button class="danger-button mini-button" data-action="delete-error" data-error-id="${error.id}" type="button">Apagar</button>
       </div>
@@ -1559,7 +1564,15 @@ function fieldInput(name, label, placeholder = "", type = "text", required = fal
 }
 
 function fieldSelect(name, label, options, required = true, value = "") {
-  return `<label class="field"><span>${label}</span><select name="${name}" ${required ? "required" : ""}><option value="">Escolha</option>${options.map((option) => `<option ${option === value ? "selected" : ""}>${option}</option>`).join("")}</select></label>`;
+  return `<label class="field"><span>${label}</span><select name="${name}" ${required ? "required" : ""}><option value="">Escolha</option>${options.map((option) => `<option value="${escapeHtml(optionValue(option))}" ${optionValue(option) === value ? "selected" : ""}>${escapeHtml(optionLabel(option))}</option>`).join("")}</select></label>`;
+}
+
+function optionValue(option) {
+  return typeof option === "object" ? option.value : option;
+}
+
+function optionLabel(option) {
+  return typeof option === "object" ? option.label : option;
 }
 
 function fieldMultiSelect(name, label, options, required = true, value = "") {
