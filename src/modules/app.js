@@ -954,12 +954,12 @@ function errorForm(error = null, formId = "errorForm") {
     <label class="field"><span>Data</span><input name="date" type="date" value="${error?.date || todayISO()}" required /></label>
     ${fieldSelect("source", "Fonte", SOURCE_OPTIONS, true, error?.source)}
     ${fieldSelect("area", "Grande area", AREA_OPTIONS, true, error?.area)}
-    ${fieldSelect("system", "Sistema principal", SYSTEM_OPTIONS, true, error?.system)}
-    ${fieldInput("subject", "Materia / subarea", "Ex.: Infectologia Respiratoria", "text", true, "", error?.subject)}
-    ${fieldInput("subtheme", "Subtema", "Ex.: Coqueluche", "text", true, "", error?.subtheme || error?.topic)}
+    ${fieldMultiSelect("subject", "Materias", SUBJECT_OPTIONS, true, error?.subject)}
+    ${fieldMultiSelect("system", "Sistemas", SYSTEM_OPTIONS, true, error?.system)}
+    ${fieldInput("subtheme", "Tema", "Ex.: Coqueluche", "text", true, "", error?.subtheme || error?.topic)}
     <label class="field full-field"><span>Questao relacionada</span><textarea name="relatedQuestion" placeholder="Enunciado resumido ou referencia da questao.">${escapeHtml(error?.relatedQuestion || "")}</textarea></label>
     <label class="field full-field"><span>Pergunta de revisao</span><textarea name="reviewQuestion" placeholder="Transforme o erro em uma pergunta para revisar depois." required>${escapeHtml(error?.reviewQuestion || "")}</textarea></label>
-    <label class="field full-field"><span>Resposta esperada</span><textarea name="expectedAnswer" placeholder="Qual resposta voce espera acertar na revisao?">${escapeHtml(error?.expectedAnswer || "")}</textarea></label>
+    <label class="field full-field"><span>Resposta e explicacao</span><textarea name="expectedAnswer" placeholder="Resposta correta e explicacao para consultar depois.">${escapeHtml(error?.expectedAnswer || "")}</textarea></label>
     ${fieldSelect("type", "Tipo de erro", ERROR_TYPE_OPTIONS, true, error?.type)}
     ${fieldSelect("difficulty", "Dificuldade", ERROR_DIFFICULTY_OPTIONS, true, error?.difficulty)}
     <label class="field"><span>Data de revisao</span><input name="reviewDate" type="date" value="${error?.reviewDate || ""}" /></label>
@@ -1260,8 +1260,7 @@ function openReviewErrorModal(errorId) {
     <article class="task-card">
       <strong>Pergunta de revisao</strong>
       <p>${error.reviewQuestion || "Sem pergunta de revisao."}</p>
-      <strong>Resposta esperada</strong>
-      <p>${error.expectedAnswer || "Sem resposta esperada."}</p>
+      ${error.expectedAnswer ? `<details class="answer-reveal"><summary>Visualizar resposta</summary><p><small>Resposta e explicacao</small>${error.expectedAnswer}</p></details>` : ""}
     </article>
     <div class="modal-actions">
       <button class="primary-button" data-action="review-error-mastered" data-error-id="${error.id}" type="button">Sim, dominei</button>
@@ -1293,7 +1292,7 @@ function errorReviewQueueCard(error) {
   return `<article class="task-card review-queue-card" data-review-card="${error.id}">
     <div><strong>${error.topic || error.subject || "Sem tema"}</strong><span>${fmtDate(error.reviewDate)} - ${error.type || "Erro"}</span></div>
     <p>${error.reviewQuestion || "Sem pergunta de revisão."}</p>
-    ${error.expectedAnswer ? `<small>Resposta esperada: ${error.expectedAnswer}</small>` : ""}
+    ${error.expectedAnswer ? `<details class="answer-reveal"><summary>Visualizar resposta</summary><p><small>Resposta e explicacao</small>${error.expectedAnswer}</p></details>` : ""}
     <label class="field full-field"><span>Observações adicionais</span><textarea data-review-notes placeholder="O que ficou claro ou ainda precisa revisar?">${escapeHtml(error.reviewNotes || "")}</textarea></label>
     <div class="review-card-actions">
       <label class="field"><span>Nova data de revisão</span><input data-review-date type="date" value="${addDays(todayISO(), 15)}" /></label>
@@ -1494,7 +1493,7 @@ function errorCard(error) {
       </div>
       ${error.relatedQuestion ? `<p><small>Questao relacionada</small>${error.relatedQuestion}</p>` : ""}
       ${error.reviewQuestion ? `<p><small>Pergunta de revisao</small>${error.reviewQuestion}</p>` : ""}
-      ${error.expectedAnswer ? `<p><small>Resposta esperada</small>${error.expectedAnswer}</p>` : ""}
+      ${error.expectedAnswer ? `<details class="answer-reveal"><summary>Visualizar resposta</summary><p><small>Resposta e explicacao</small>${error.expectedAnswer}</p></details>` : ""}
       <div class="error-card-actions">
         <select data-error-status="${error.id}" aria-label="Status do erro">${ERROR_STATUS_OPTIONS.map((status) => `<option value="${escapeHtml(optionValue(status))}" ${optionValue(status) === error.status ? "selected" : ""}>${escapeHtml(optionLabel(status))}</option>`).join("")}</select>
         <button class="secondary-button mini-button" data-action="edit-error" data-error-id="${error.id}" type="button">Editar</button>

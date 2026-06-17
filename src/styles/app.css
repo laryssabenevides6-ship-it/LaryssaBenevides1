@@ -3407,6 +3407,47 @@ body[data-theme="light"] .board-cell textarea {
   margin-bottom: 4px;
 }
 
+.answer-reveal {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--info) 30%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--info) 6%, var(--surface));
+}
+
+.answer-reveal summary {
+  cursor: pointer;
+  list-style: none;
+  color: var(--info);
+  font-weight: 900;
+}
+
+.answer-reveal summary::-webkit-details-marker {
+  display: none;
+}
+
+.answer-reveal summary::after {
+  content: "Mostrar";
+  float: right;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--info) 14%, var(--surface));
+  color: var(--info);
+  font-size: 11px;
+}
+
+.answer-reveal[open] summary::after {
+  content: "Ocultar";
+}
+
+.answer-reveal p {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
 .errors-toolbar p {
   margin: 0;
 }
