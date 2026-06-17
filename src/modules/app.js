@@ -949,14 +949,24 @@ function renderErrors(d) {
 function errorForm(error = null, formId = "errorForm") {
   const isEdit = Boolean(error);
   return `<div class="section-title"><h2>${isEdit ? "Editar erro" : "Novo erro"}</h2><span>banco de revisao</span></div>
-  <form id="${formId}" class="form">
+  <form id="${formId}" class="form error-form">
     ${isEdit ? `<input type="hidden" name="id" value="${error.id}" />` : ""}
-    <label class="field"><span>Data</span><input name="date" type="date" value="${error?.date || todayISO()}" required /></label>
-    ${fieldSelect("source", "Fonte", SOURCE_OPTIONS, true, error?.source)}
-    ${fieldSelect("area", "Grande area", AREA_OPTIONS, true, error?.area)}
-    ${fieldMultiSelect("subject", "Materias", SUBJECT_OPTIONS, true, error?.subject)}
-    ${fieldMultiSelect("system", "Sistemas", SYSTEM_OPTIONS, true, error?.system)}
-    ${fieldInput("subtheme", "Tema", "Ex.: Coqueluche", "text", true, "", error?.subtheme || error?.topic)}
+    <section class="error-form-block full-field">
+      <h3>Identificacao</h3>
+      <div class="error-form-grid three">
+        <label class="field"><span>Data</span><input name="date" type="date" value="${error?.date || todayISO()}" required /></label>
+        ${fieldSelect("source", "Fonte", SOURCE_OPTIONS, true, error?.source)}
+        ${fieldSelect("area", "Grande area", AREA_OPTIONS, true, error?.area)}
+      </div>
+    </section>
+    <section class="error-form-block full-field">
+      <h3>Conteudo da questao</h3>
+      <div class="error-form-grid three">
+        ${fieldMultiSelect("subject", "Materias", SUBJECT_OPTIONS, true, error?.subject)}
+        ${fieldMultiSelect("system", "Sistemas", SYSTEM_OPTIONS, true, error?.system)}
+        ${fieldInput("subtheme", "Tema", "Ex.: Coqueluche", "text", true, "", error?.subtheme || error?.topic)}
+      </div>
+    </section>
     <label class="field full-field"><span>Questao relacionada</span><textarea name="relatedQuestion" placeholder="Enunciado resumido ou referencia da questao.">${escapeHtml(error?.relatedQuestion || "")}</textarea></label>
     <label class="field full-field"><span>Pergunta de revisao</span><textarea name="reviewQuestion" placeholder="Transforme o erro em uma pergunta para revisar depois." required>${escapeHtml(error?.reviewQuestion || "")}</textarea></label>
     <label class="field full-field"><span>Resposta e explicacao</span><textarea name="expectedAnswer" placeholder="Resposta correta e explicacao para consultar depois.">${escapeHtml(error?.expectedAnswer || "")}</textarea></label>

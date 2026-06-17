@@ -655,6 +655,46 @@ th {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.error-form {
+  gap: 12px;
+}
+
+.error-form-block {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--line) 86%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-2) 58%, var(--surface));
+}
+
+.error-form-block h3 {
+  margin: 0;
+  color: color-mix(in srgb, var(--text) 88%, var(--muted));
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.error-form-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.error-form-grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.error-form .multi-field summary {
+  min-height: 46px;
+  background: var(--surface-2);
+}
+
+.error-form .field input,
+.error-form .field select,
+.error-form .field textarea {
+  min-height: 46px;
+}
+
 .form input,
 .form select,
 .form textarea {
@@ -3511,7 +3551,8 @@ body[data-theme="light"] .board-cell textarea {
 
   .today-required-grid,
   .today-reminder-grid,
-  .errors-library-grid {
+  .errors-library-grid,
+  .error-form-grid.three {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -3530,7 +3571,8 @@ body[data-theme="light"] .board-cell textarea {
   .today-reminder-grid,
   .errors-library-grid,
   .error-library-toolbar,
-  .error-detail-grid {
+  .error-detail-grid,
+  .error-form-grid.three {
     grid-template-columns: 1fr;
   }
 
