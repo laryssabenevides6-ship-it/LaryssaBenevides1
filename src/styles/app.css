@@ -695,6 +695,23 @@ th {
   min-height: 46px;
 }
 
+.error-content-block .field {
+  position: relative;
+  gap: 0;
+}
+
+.error-content-block .field span {
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  z-index: 1;
+}
+
+.error-content-block .field input {
+  min-height: 54px;
+  padding-top: 24px;
+}
+
 .form input,
 .form select,
 .form textarea {

@@ -951,7 +951,7 @@ function errorForm(error = null, formId = "errorForm") {
   return `<div class="section-title"><h2>${isEdit ? "Editar erro" : "Novo erro"}</h2><span>banco de revisao</span></div>
   <form id="${formId}" class="form error-form">
     ${isEdit ? `<input type="hidden" name="id" value="${error.id}" />` : ""}
-    <section class="error-form-block full-field">
+    <section class="error-form-block error-content-block full-field">
       <h3>Identificacao</h3>
       <div class="error-form-grid three">
         <label class="field"><span>Data</span><input name="date" type="date" value="${error?.date || todayISO()}" required /></label>
