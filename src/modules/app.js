@@ -951,7 +951,7 @@ function errorForm(error = null, formId = "errorForm") {
   return `<div class="section-title"><h2>${isEdit ? "Editar erro" : "Novo erro"}</h2><span>banco de revisao</span></div>
   <form id="${formId}" class="form error-form">
     ${isEdit ? `<input type="hidden" name="id" value="${error.id}" />` : ""}
-    <section class="error-form-block error-content-block full-field">
+    <section class="error-form-block full-field">
       <h3>Identificacao</h3>
       <div class="error-form-grid three">
         <label class="field"><span>Data</span><input name="date" type="date" value="${error?.date || todayISO()}" required /></label>
@@ -959,11 +959,13 @@ function errorForm(error = null, formId = "errorForm") {
         ${fieldSelect("area", "Grande area", AREA_OPTIONS, true, error?.area)}
       </div>
     </section>
-    <section class="error-form-block full-field">
+    <section class="error-form-block error-content-block full-field">
       <h3>Conteudo da questao</h3>
-      <div class="error-form-grid three">
+      <div class="error-form-grid two">
         ${fieldMultiSelect("subject", "Materias", SUBJECT_OPTIONS, true, error?.subject)}
         ${fieldMultiSelect("system", "Sistemas", SYSTEM_OPTIONS, true, error?.system)}
+      </div>
+      <div class="error-topic-row">
         ${fieldInput("subtheme", "Tema", "Ex.: Coqueluche", "text", true, "", error?.subtheme || error?.topic)}
       </div>
     </section>

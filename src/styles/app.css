@@ -661,8 +661,8 @@ th {
 
 .error-form-block {
   display: grid;
-  gap: 10px;
-  padding: 14px;
+  gap: 12px;
+  padding: 16px;
   border: 1px solid color-mix(in srgb, var(--line) 86%, transparent);
   border-radius: 8px;
   background: color-mix(in srgb, var(--surface-2) 58%, var(--surface));
@@ -670,9 +670,10 @@ th {
 
 .error-form-block h3 {
   margin: 0;
-  color: color-mix(in srgb, var(--text) 88%, var(--muted));
-  font-size: 14px;
+  color: color-mix(in srgb, var(--brand) 58%, var(--text));
+  font-size: 13px;
   font-weight: 900;
+  letter-spacing: 0;
 }
 
 .error-form-grid {
@@ -682,6 +683,14 @@ th {
 
 .error-form-grid.three {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.error-form-grid.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.error-topic-row {
+  max-width: min(720px, 100%);
 }
 
 .error-form .multi-field summary {
@@ -695,21 +704,8 @@ th {
   min-height: 46px;
 }
 
-.error-content-block .field {
-  position: relative;
-  gap: 0;
-}
-
-.error-content-block .field span {
-  position: absolute;
-  top: 8px;
-  left: 12px;
-  z-index: 1;
-}
-
-.error-content-block .field input {
-  min-height: 54px;
-  padding-top: 24px;
+.error-content-block {
+  border-color: color-mix(in srgb, var(--brand) 20%, var(--line));
 }
 
 .form input,
@@ -3569,7 +3565,8 @@ body[data-theme="light"] .board-cell textarea {
   .today-required-grid,
   .today-reminder-grid,
   .errors-library-grid,
-  .error-form-grid.three {
+  .error-form-grid.three,
+  .error-form-grid.two {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -3589,7 +3586,8 @@ body[data-theme="light"] .board-cell textarea {
   .errors-library-grid,
   .error-library-toolbar,
   .error-detail-grid,
-  .error-form-grid.three {
+  .error-form-grid.three,
+  .error-form-grid.two {
     grid-template-columns: 1fr;
   }
 
