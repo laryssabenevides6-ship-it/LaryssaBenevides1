@@ -27,7 +27,7 @@ import {
   resetState,
   saveState
 } from "./storage.js";
-import { addDays, fmtDate, pct, todayISO } from "./utils.js";
+import { addDays, diffDays, fmtDate, pct, todayISO } from "./utils.js";
 
 const views = [
   ["today", "Hoje", "H"],
@@ -1011,8 +1011,10 @@ function errorForm(error = null, formId = "errorForm") {
 function renderDashboard(d) {
   const weekly = dashboardWeeklyProgress(d);
   const pending = overdueItems(d.now).length;
+  const remaining = scheduleDaysRemaining(d.now);
   return `<div class="grid metrics dashboard-secondary-metrics dashboard-sticky-metrics">
       ${lessonProgressMetric(d.lessonProgress)}
+      ${metric("Fim do cronograma", remaining.days, remaining.hint)}
       ${metric("Questoes", d.totalQuestions, "total")}
       ${metric("Acertos", `${d.accuracy}%`, "geral")}
       ${metric("Erros", d.questionErrors, "em questoes")}
@@ -1037,6 +1039,13 @@ function renderDashboard(d) {
       <section class="panel">${barPairs(withoutFreeStatus(d.statusCounts), "Status do cronograma")}</section>
       <section class="panel">${simulationCompare()}</section>
     </div>`;
+}
+
+function scheduleDaysRemaining(now = todayISO()) {
+  const lastDate = state.schedule.map((day) => day.date).filter(Boolean).sort().at(-1);
+  if (!lastDate) return { days: "-", hint: "sem data final" };
+  const days = Math.max(0, diffDays(lastDate, now));
+  return { days, hint: days === 1 ? "dia restante" : "dias restantes" };
 }
 
 function withoutFreeStatus(statusCounts = {}) {

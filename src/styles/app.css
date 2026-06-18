@@ -2428,7 +2428,7 @@ th {
 }
 
 .dashboard-secondary-metrics {
-  grid-template-columns: minmax(220px, 1.35fr) repeat(3, minmax(150px, 1fr));
+  grid-template-columns: minmax(210px, 1.35fr) repeat(4, minmax(130px, 1fr));
   gap: 10px;
 }
 
