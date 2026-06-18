@@ -527,19 +527,34 @@ function overdueTaskTitle(day, key) {
 function overduePanel(title, items) {
   const visibleItems = showAllOverdue ? items : items.slice(0, 5);
   const hiddenCount = Math.max(0, items.length - visibleItems.length);
+  const lessonTotal = items.filter((item) => item.kind !== "error-review").length;
+  const reviewTotal = items.length - lessonTotal;
   const lessonItems = visibleItems.filter((item) => item.kind !== "error-review");
   const reviewItems = visibleItems.filter((item) => item.kind === "error-review");
   return `<section class="panel overdue-panel">
-    <div class="section-title"><h2>${title}</h2><span>${items.length} pendencia(s)</span></div>
-    <div class="overdue-groups">
-      ${lessonItems.length ? overdueGroup("Aulas atrasadas", lessonItems, "lesson") : ""}
-      ${reviewItems.length ? overdueGroup("Revisoes atrasadas", reviewItems, "review") : ""}
-      ${visibleItems.length ? "" : empty("Nenhuma pendencia atrasada.")}
-    </div>
-    ${hiddenCount || showAllOverdue ? `<div class="overdue-list-footer">
-      <span>${hiddenCount ? `${hiddenCount} pendencia(s) oculta(s)` : "Lista completa visivel"}</span>
-      <button class="secondary-button mini-button" data-action="toggle-overdue-list" type="button">${showAllOverdue ? "Mostrar menos" : "Ver todas"}</button>
-    </div>` : ""}
+    <details class="overdue-disclosure" ${showAllOverdue ? "open" : ""}>
+      <summary class="overdue-summary">
+        <div>
+          <h2>${title}</h2>
+          <span>${items.length} pendencia(s) no total</span>
+        </div>
+        <div class="overdue-summary-counts">
+          <strong>${lessonTotal}</strong><span>aulas</span>
+          <strong>${reviewTotal}</strong><span>revisoes</span>
+        </div>
+      </summary>
+      <div class="overdue-content">
+        <div class="overdue-groups">
+          ${lessonItems.length ? overdueGroup("Aulas atrasadas", lessonItems, "lesson") : ""}
+          ${reviewItems.length ? overdueGroup("Revisoes atrasadas", reviewItems, "review") : ""}
+          ${visibleItems.length ? "" : empty("Nenhuma pendencia atrasada.")}
+        </div>
+        ${hiddenCount || showAllOverdue ? `<div class="overdue-list-footer">
+          <span>${hiddenCount ? `${hiddenCount} pendencia(s) oculta(s)` : "Lista completa visivel"}</span>
+          <button class="secondary-button mini-button" data-action="toggle-overdue-list" type="button">${showAllOverdue ? "Mostrar menos" : "Ver todas"}</button>
+        </div>` : ""}
+      </div>
+    </details>
   </section>`;
 }
 

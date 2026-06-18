@@ -2004,6 +2004,73 @@ th {
   border-color: color-mix(in srgb, var(--danger) 32%, var(--line));
 }
 
+.overdue-disclosure {
+  display: grid;
+  gap: 12px;
+}
+
+.overdue-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 18px;
+  gap: 14px;
+  align-items: center;
+  cursor: pointer;
+  list-style: none;
+}
+
+.overdue-summary::-webkit-details-marker {
+  display: none;
+}
+
+.overdue-summary::after {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg);
+  transition: transform 0.16s ease;
+}
+
+.overdue-disclosure[open] .overdue-summary::after {
+  transform: rotate(225deg);
+}
+
+.overdue-summary h2 {
+  margin: 0 0 4px;
+  font-size: 17px;
+}
+
+.overdue-summary > div:first-child span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.overdue-summary-counts {
+  display: grid;
+  grid-template-columns: auto auto auto auto;
+  gap: 6px;
+  align-items: center;
+  padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--danger) 18%, var(--line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--danger) 7%, var(--surface-2));
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.overdue-summary-counts strong {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.overdue-content {
+  display: grid;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, var(--danger) 18%, var(--line));
+}
+
 .overdue-groups {
   display: grid;
   gap: 12px;
