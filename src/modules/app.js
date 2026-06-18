@@ -434,15 +434,14 @@ function weekDayCard(day) {
 function renderSchedule(d) {
   const q = searchTerm();
   const weeks = groupScheduleByWeek(state.schedule.filter((day) => matches(day, q)));
-  if (!selectedScheduleWeek || !weeks.some(([week]) => week === selectedScheduleWeek)) selectedScheduleWeek = weeks[0]?.[0] || d.week;
+  if (!selectedScheduleWeek || !weeks.some(([week]) => week === selectedScheduleWeek)) {
+    selectedScheduleWeek = weeks.some(([week]) => week === d.week) ? d.week : weeks[0]?.[0] || d.week;
+  }
   const weekItems = weeks.find(([week]) => week === selectedScheduleWeek)?.[1] || [];
   const board = state.weeklyBoards?.[`schedule:${selectedScheduleWeek}`]?.content || "";
   const overdue = overdueItems(d.now);
   return `<div class="schedule-shell">
-    <aside class="week-sidebar panel">
-      <div class="section-title"><h2>Semanas</h2><span>${weeks.length}</span></div>
-      ${weeks.map(([week, items], index) => weekButton(week, items, index)).join("")}
-    </aside>
+    ${weekSelector(weeks, weekItems)}
     <div class="schedule-main">
       ${overduePanel("Aulas e tarefas atrasadas", overdue)}
       <section class="panel weekly-board">
@@ -459,6 +458,22 @@ function renderSchedule(d) {
       </section>
     </div>
   </div>`;
+}
+
+function weekSelector(weeks, weekItems) {
+  return `<details class="week-selector panel">
+    <summary>
+      <div>
+        <span>Semana selecionada</span>
+        <strong>${weekTitle(selectedScheduleWeek, weeks)}</strong>
+        <small>${weekRangeTitle(selectedScheduleWeek, weekItems)}</small>
+      </div>
+      <em>${weeks.length} semana(s)</em>
+    </summary>
+    <div class="week-options">
+      ${weeks.map(([week, items], index) => weekButton(week, items, index)).join("")}
+    </div>
+  </details>`;
 }
 
 function overdueItems(now = todayISO()) {
