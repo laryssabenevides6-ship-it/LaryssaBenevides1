@@ -880,14 +880,14 @@ function renderQuestions(d) {
       <div class="quick-result">
         <div><span>Acerto do bloco</span><strong id="qAccuracyPreview">-</strong></div>
         <div><span>Tempo por questao</span><strong id="qAvgPreview">-</strong></div>
+        <div class="grid metrics compact-metrics questions-top-metrics">
+          ${metric("Questoes", d.totalQuestions, "registradas")}
+          ${metric("Acertos", `${d.accuracy}%`, "geral")}
+          ${metric("Semana", d.weekQuestions, "ultimos 7 dias")}
+        </div>
       </div>
     </section>
     <section class="panel questions-main simple-question-panel">${questionsForm()}</section>
-    <div class="grid metrics compact-metrics">
-      ${metric("Questoes", d.totalQuestions, "registradas")}
-      ${metric("Acertos", `${d.accuracy}%`, "geral")}
-      ${metric("Semana", d.weekQuestions, "ultimos 7 dias")}
-    </div>
     <section class="panel simulation-panel">${simulationForm()}</section>
     <section class="panel"><div class="section-title"><h2>Historico recente</h2><span>ultimos registros</span></div>${historyList(state.sessions.slice(-8).reverse())}</section>`;
 }

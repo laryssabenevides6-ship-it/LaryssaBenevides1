@@ -970,26 +970,34 @@ th {
   gap: 10px;
 }
 
-.quick-result div {
+.quick-result > div {
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface-2);
 }
 
-.quick-result span,
-.quick-result strong {
+.quick-result > div > span,
+.quick-result > div > strong {
   display: block;
 }
 
-.quick-result span {
+.quick-result > div > span {
   color: var(--muted);
   font-size: 13px;
 }
 
-.quick-result strong {
+.quick-result > div > strong {
   margin-top: 5px;
   font-size: 28px;
+}
+
+.questions-top-metrics {
+  grid-column: 1 / -1;
+}
+
+.questions-top-metrics .metric {
+  box-shadow: none;
 }
 
 .simple-question-panel {
