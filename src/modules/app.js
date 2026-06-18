@@ -982,10 +982,9 @@ function errorForm(error = null, formId = "errorForm") {
     ${isEdit ? `<input type="hidden" name="id" value="${error.id}" />` : ""}
     <section class="error-form-block full-field">
       <h3>Identificacao</h3>
-      <div class="error-form-grid three">
+      <div class="error-form-grid two">
         <label class="field"><span>Data</span><input name="date" type="date" value="${error?.date || todayISO()}" required /></label>
         ${fieldSelect("source", "Fonte", SOURCE_OPTIONS, true, error?.source)}
-        ${fieldSelect("area", "Grande area", AREA_OPTIONS, true, error?.area)}
       </div>
     </section>
     <section class="error-form-block error-content-block full-field">
