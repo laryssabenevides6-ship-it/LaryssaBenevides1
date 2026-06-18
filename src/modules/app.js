@@ -441,7 +441,7 @@ function renderSchedule(d) {
   const board = state.weeklyBoards?.[`schedule:${selectedScheduleWeek}`]?.content || "";
   const overdue = overdueItems(d.now);
   return `<div class="schedule-shell">
-    ${weekSelector(weeks, weekItems)}
+    ${weekSelector(weeks, weekItems, d.week)}
     <div class="schedule-main">
       ${overduePanel("Aulas e tarefas atrasadas", overdue)}
       <section class="panel weekly-board">
@@ -460,7 +460,7 @@ function renderSchedule(d) {
   </div>`;
 }
 
-function weekSelector(weeks, weekItems) {
+function weekSelector(weeks, weekItems, currentWeek) {
   return `<details class="week-selector panel">
     <summary>
       <div>
@@ -471,7 +471,7 @@ function weekSelector(weeks, weekItems) {
       <em>${weeks.length} semana(s)</em>
     </summary>
     <div class="week-options">
-      ${weeks.map(([week, items], index) => weekButton(week, items, index)).join("")}
+      ${weeks.map(([week, items], index) => weekButton(week, items, index, currentWeek)).join("")}
     </div>
   </details>`;
 }
@@ -828,9 +828,10 @@ function groupScheduleByWeek(items) {
   return [...groups.entries()];
 }
 
-function weekButton(week, items, index) {
+function weekButton(week, items, index, currentWeek = "") {
+  const isCurrent = week === currentWeek;
   return `<button class="${week === selectedScheduleWeek ? "active" : ""}" data-week-select="${week}">
-    <strong>Semana ${index + 1}</strong>
+    <strong>Semana ${index + 1}${isCurrent ? `<em class="current-week-badge">Semana atual</em>` : ""}</strong>
     <span>${fmtDate(items[0]?.date)} a ${fmtDate(items.at(-1)?.date)}</span>
     <small>${items.filter((item) => item.status === "Feito").length}/${items.length} feito(s)</small>
   </button>`;
