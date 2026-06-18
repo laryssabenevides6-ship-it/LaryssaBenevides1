@@ -629,7 +629,6 @@ function scheduleDayPanel(day) {
     <header class="schedule-day-header">
       <div>
         <h3>${scheduleDayTitle(day)}</h3>
-        <span>${weekTitle(day.week, groupScheduleByWeek(state.schedule))}</span>
       </div>
       <div class="schedule-day-meta">
         <span class="status-pill ${statusClass(day.status)}">${day.status}</span>

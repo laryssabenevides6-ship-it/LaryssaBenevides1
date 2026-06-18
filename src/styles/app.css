@@ -3090,16 +3090,16 @@ th {
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  padding: 14px 18px 13px;
+  padding: 10px 16px;
   border-bottom: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
   background: color-mix(in srgb, var(--surface-2) 74%, var(--surface));
-  box-shadow: inset 4px 0 0 color-mix(in srgb, var(--brand) 72%, var(--brand-2));
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--brand) 72%, var(--brand-2));
 }
 
 .schedule-day-header h3 {
-  margin: 0 0 5px;
+  margin: 0;
   color: var(--text);
-  font-size: 21px;
+  font-size: 19px;
   line-height: 1.12;
 }
 
@@ -3107,18 +3107,6 @@ th {
 .lesson-side small,
 .lesson-main small {
   color: var(--muted);
-}
-
-.schedule-day-header span {
-  display: inline-flex;
-  margin-top: 4px;
-  padding: 3px 8px;
-  border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--brand-2) 26%, var(--surface));
-  color: color-mix(in srgb, var(--text) 88%, var(--muted));
-  font-size: 12px;
-  font-weight: 900;
 }
 
 .schedule-day-meta {
