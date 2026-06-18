@@ -3418,10 +3418,6 @@ body[data-theme="light"] .schedule-day-header {
   border-top: 1px solid var(--line);
 }
 
-.week-options .active {
-  order: -1;
-}
-
 .week-options button {
   width: 100%;
   display: grid;
