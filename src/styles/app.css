@@ -76,7 +76,7 @@ button {
   gap: 22px;
   padding: 22px;
   border-right: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface) 92%, var(--bg));
+  background: var(--bg);
 }
 
 .brand,
