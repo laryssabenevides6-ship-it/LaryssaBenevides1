@@ -1844,13 +1844,15 @@ function diagnosticAlertsCard(alerts = []) {
     <div class="diagnostic-alert-list">${
       alerts.map((alert) => `<div><span>!</span><p>${alert}</p></div>`).join("") || empty("Nenhum alerta critico no momento.")
     }</div>
+    <p class="ranking-footnote">Quanto maior a barra, maior a prioridade para revisar esse sistema.</p>
   </article>`;
 }
 
 function systemRankingCard(items = []) {
   const max = Math.max(...items.map((item) => item.value), 1);
   return `<article class="insight-card system-ranking-card">
-    <div class="insight-heading"><span>Ranking dos sistemas</span><b>${items.length}</b></div>
+    <div class="insight-heading"><span>Sistemas com mais erros</span><b>${items.length}</b></div>
+    <p class="ranking-explainer">Mostra onde seus erros estao mais concentrados. Use os primeiros itens como prioridade de revisao.</p>
     <div class="system-ranking">${
       items
         .slice(0, 8)
@@ -1860,8 +1862,8 @@ function systemRankingCard(items = []) {
             <div class="system-rank-main">
               <div><strong>${item.label}</strong><span>${item.value} erro(s) · ${item.percent}%</span></div>
               <div class="profile-track"><i style="width:${Math.round((item.value / max) * 100)}%"></i></div>
+              <small>${item.percent}% dos erros registrados no caderno</small>
             </div>
-            ${trendBadge(item)}
           </div>`
         )
         .join("") || empty("Sem sistemas classificados.")

@@ -2933,6 +2933,30 @@ th {
   white-space: nowrap;
 }
 
+.system-rank-main small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.ranking-explainer,
+.ranking-footnote {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.ranking-explainer {
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--info) 20%, var(--line));
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--info) 7%, var(--surface));
+}
+
+.ranking-footnote {
+  padding-top: 2px;
+}
+
 .weakness-tree {
   display: grid;
   gap: 8px;
