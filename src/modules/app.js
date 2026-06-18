@@ -251,11 +251,7 @@ function renderToday(d) {
   const overdue = overdueItems(d.now);
   return `
     ${todayPlan(day, d.now)}
-    ${overdue.length ? overduePanel("Atrasados", overdue) : ""}
-    <section class="panel">
-      <div class="section-title"><h2>Alertas</h2><span>prioridade do dia</span></div>
-      ${alertList(d.alerts)}
-    </section>`;
+    ${overdue.length ? overduePanel("Atrasados", overdue) : ""}`;
 }
 
 function todayPlan(day, now) {
