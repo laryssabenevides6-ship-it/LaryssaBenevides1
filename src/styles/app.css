@@ -3,9 +3,9 @@
 :root {
   color-scheme: dark;
   --font-main: "Nunito Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --bg: #0d1422;
-  --surface: #141e30;
-  --surface-2: #1c2a42;
+  --bg: #070b16;
+  --surface: #121b2d;
+  --surface-2: #1a263c;
   --text: #edf3fb;
   --muted: #b2bfd1;
   --line: rgba(201, 216, 240, 0.16);
