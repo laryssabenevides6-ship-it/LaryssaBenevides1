@@ -3320,6 +3320,67 @@ body[data-theme="light"] .schedule-day-header {
   background: color-mix(in srgb, var(--brand) 7%, var(--surface));
 }
 
+.outside-study-disclosure {
+  padding: 0;
+  overflow: hidden;
+}
+
+.outside-study-disclosure summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 18px;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.outside-study-disclosure summary::-webkit-details-marker {
+  display: none;
+}
+
+.outside-study-disclosure summary::after {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg);
+  transition: transform 0.16s ease;
+}
+
+.outside-study-disclosure[open] summary::after {
+  transform: rotate(225deg);
+}
+
+.outside-study-disclosure h2 {
+  margin: 0 0 3px;
+  font-size: 17px;
+}
+
+.outside-study-disclosure summary span,
+.outside-study-disclosure summary em {
+  color: var(--muted);
+  font-style: normal;
+}
+
+.outside-study-disclosure summary span {
+  font-size: 13px;
+}
+
+.outside-study-disclosure summary em {
+  font-size: 13px;
+}
+
+.outside-study-content {
+  padding: 0 16px 16px;
+  border-top: 1px solid var(--line);
+}
+
+.outside-study-content .outside-study-form {
+  padding-top: 14px;
+}
+
 .schedule-shell {
   display: grid;
   gap: 14px;

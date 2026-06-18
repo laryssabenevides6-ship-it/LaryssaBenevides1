@@ -448,10 +448,16 @@ function renderSchedule(d) {
         <div class="section-title"><h2>Lousa semanal - ${weekTitle(selectedScheduleWeek, weeks)}</h2><span>autosave local</span></div>
         ${weeklyBoardGrid(selectedScheduleWeek, board)}
       </section>
-      <section class="panel">
-        <div class="section-title"><h2>Estudos fora do cronograma</h2><span>aparecem no dia escolhido</span></div>
-        ${outsideStudyForm()}
-      </section>
+      <details class="panel outside-study-disclosure">
+        <summary>
+          <div>
+            <h2>Estudos fora do cronograma</h2>
+            <span>Adicionar aula extra em um dia especifico</span>
+          </div>
+          <em>aparecem no dia escolhido</em>
+        </summary>
+        <div class="outside-study-content">${outsideStudyForm()}</div>
+      </details>
       <section class="panel">
         <div class="section-title"><h2>${weekRangeTitle(selectedScheduleWeek, weekItems)}</h2><span>${weekItems.length} dia(s)</span></div>
         <div class="schedule-week-list">${weekItems.map(scheduleDayPanel).join("") || empty("Nenhum dia nesta semana.")}</div>
