@@ -1015,8 +1015,8 @@ function renderDashboard(d) {
       ${lessonProgressMetric(d.lessonProgress)}
       ${metric("Fim do cronograma", remaining.days, remaining.hint)}
       ${metric("Questoes", d.totalQuestions, "total")}
-      ${metric("Acertos", `${d.accuracy}%`, "geral")}
-      ${metric("Erros", d.questionErrors, "em questoes")}
+      ${metric("Acertos", `${d.accuracy}%`, `${d.totalCorrect} de ${d.totalQuestions} questoes`)}
+      ${metric("Erros", `${pct(d.questionErrors, d.totalQuestions)}%`, `${d.questionErrors} de ${d.totalQuestions} questoes`)}
     </div>
     <section class="dashboard-priority-grid">
       <article class="panel dashboard-week-progress">
