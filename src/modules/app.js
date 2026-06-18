@@ -625,7 +625,8 @@ function scheduleDayPanel(day) {
   const totalItems = scheduledLessonCount + outsideStudies.length;
   const hasScheduledLessons = scheduledLessonCount > 0;
   const hasChecklistWork = hasScheduledLessons || outsideStudies.length > 0 || reviewCount > 0;
-  return `<article class="schedule-day-panel ${day.status === "Atrasado" ? "late" : ""}">
+  const isCompactFree = !hasChecklistWork;
+  return `<article class="schedule-day-panel ${day.status === "Atrasado" ? "late" : ""} ${isCompactFree ? "free-compact" : ""}">
     <header class="schedule-day-header">
       <div>
         <h3>${scheduleDayTitle(day)}</h3>
@@ -635,13 +636,12 @@ function scheduleDayPanel(day) {
         <b>${totalItems} aula(s)</b>
       </div>
     </header>
-    <div class="schedule-lesson-list">
+    ${isCompactFree ? "" : `<div class="schedule-lesson-list">
       ${scheduleLessonCard(day, "medcof", "MEDCOF", day.area || "MEDCOF", day.medcofClass, day.medcofPriority || day.monthlyPriority)}
       ${scheduleLessonCard(day, "step", "B&B / Step 1", day.stepSystem || "Step 1", day.stepClass, "Step 1")}
       ${reviewCount ? scheduleErrorReviewCard(day.date, reviewCount) : ""}
       ${outsideStudies.map(outsideStudyScheduleCard).join("")}
-      ${totalItems ? "" : empty("Dia livre no cronograma.")}
-    </div>
+    </div>`}
     ${
       hasChecklistWork
         ? `<footer class="schedule-day-footer">

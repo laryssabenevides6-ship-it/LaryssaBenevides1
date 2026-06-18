@@ -3103,6 +3103,21 @@ th {
   line-height: 1.12;
 }
 
+.schedule-day-panel.free-compact {
+  box-shadow: none;
+}
+
+.schedule-day-panel.free-compact .schedule-day-header {
+  padding: 8px 14px;
+  border-bottom: 0;
+  background: color-mix(in srgb, var(--surface) 82%, var(--surface-2));
+  box-shadow: inset 3px 0 0 color-mix(in srgb, var(--brand-2) 70%, var(--line));
+}
+
+.schedule-day-panel.free-compact .schedule-day-header h3 {
+  font-size: 17px;
+}
+
 .schedule-day-footer small,
 .lesson-side small,
 .lesson-main small {
